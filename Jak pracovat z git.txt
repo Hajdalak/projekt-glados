@@ -1,5 +1,0 @@
-Pred praci vzdy:
-1)dat fetch -> pokud se naslo nove tak stahnout
-2)vzdy napsat na mes na cem delas jinak uze vzniknout kolize mezi 2 verzema mezi 2 lidma
-3)nahrat projet
-kagus
