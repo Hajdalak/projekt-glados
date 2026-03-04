@@ -35,7 +35,7 @@ def jizdaDopreduO(rychlost,cas):
 # ==========SMYSL==============
 def main():
 
-    plutoHledaMicek.videt(turtle)
+    plutoHledaMicek.videt(Turtlebot(rgb=True))
     cameraHan.odometry(turtle)
     cameraHan.rgbImage(turtle)
     cameraHan.depthImage(turtle)
