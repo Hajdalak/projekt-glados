@@ -1,6 +1,7 @@
 from __future__ import print_function
 from robolab_turtlebot import Turtlebot, Rate, get_time
 import cameraHan
+import plutoHledaMicek
 
 killSwitch = 0
 turtle = Turtlebot()
@@ -34,6 +35,7 @@ def jizdaDopreduO(rychlost,cas):
 # ==========SMYSL==============
 def main():
 
+    plutoHledaMicek.videt(turtle)
     cameraHan.odometry(turtle)
     cameraHan.rgbImage(turtle)
     cameraHan.depthImage(turtle)
