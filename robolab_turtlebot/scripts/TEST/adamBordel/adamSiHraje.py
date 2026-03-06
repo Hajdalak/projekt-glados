@@ -1,6 +1,7 @@
 from __future__ import print_function
 from robolab_turtlebot import Turtlebot, Rate, get_time
 import cameraHan
+import plutoHledaMicek
 
 killSwitch = 0
 turtle = Turtlebot()
@@ -26,11 +27,6 @@ def jizdaDopreduO(rychlost,cas):
         turtle.cmd_velocity(linear=rychlost)
         rate.sleep()
 
-def jizdaDokud(rychlost, podminka):
-
-    while podminka:
-        #doladit cas dle realneho testu
-        jizdaDopreduO(rychlost,0.1)
 # <=        
 # ==========POHYB==============
 # ==========SMYSL==============
@@ -39,11 +35,14 @@ def jizdaDokud(rychlost, podminka):
 # ==========SMYSL==============
 def main():
 
+    plutoHledaMicek.videt(Turtlebot(rgb=True))
+    cameraHan.odometry(turtle)
+    cameraHan.rgbImage(turtle)
+    cameraHan.depthImage(turtle)
+    cameraHan.pointCloud(turtle)
+
     turtle.register_bumper_event_cb(bumperProc)
     jizdaDopreduO(10,0.1)
-    
-
-    
     
 
 if __name__ == '__main__':
