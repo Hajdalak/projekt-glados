@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Robot Development
+*.launch
+*.bag
+*.rviz
+*.urdf
+*.xacro
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+
+# Shell
+*.sh
+*~
+.dSYM/
+
+# Python Testing
+.coverage
+nosetests.xml
+test-results/
+
+# IDEs and Editors
+.idea/
+.vscode/
+*.swp
+*.swo
