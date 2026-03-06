@@ -5,7 +5,7 @@ date: 2021-02-10
 update: 2023-03-16
 ---
 
-# LAR
+# LAR - HOW TO CONECNT TO THE ROBOT
 
  - [FAQ](doc/faq.md) - questions, problems
 
