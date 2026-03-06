@@ -25,12 +25,12 @@ def jizdaDopreduO(rychlost,cas):
         turtle.cmd_velocity(linear=rychlost)
         rate.sleep()
 
-def jizdaDokud(rychlost, podminka):
+# def jizdaDokud(rychlost, podminka):
 
-    while podminka:
-        #doladit cas dle realneho testu
-        jizdaDopreduO(rychlost,0.1)
-# <=        
+#     while podminka:
+#         #doladit cas dle realneho testu
+#         jizdaDopreduO(rychlost,0.1)
+# # <=        
 # ==========POHYB==============
 # ==========SMYSL==============
 # =>
@@ -39,7 +39,7 @@ def jizdaDokud(rychlost, podminka):
 def main():
 
     turtle.register_bumper_event_cb(bumperProc)
-    jizdaDopreduO(10,0.1)
+    jizdaDopreduO(1,10)
     
 
     
