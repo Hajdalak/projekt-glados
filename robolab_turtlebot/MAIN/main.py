@@ -1,6 +1,6 @@
 from __future__ import print_function
 from robolab_turtlebot import Turtlebot, Rate, get_time
-from MAIN import vision
+import vision
 
 killSwitch = 0
 turtle = Turtlebot(rgb=True)
