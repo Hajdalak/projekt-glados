@@ -4,9 +4,9 @@ import vision
 
 killSwitch = 0
 turtle = Turtlebot(rgb=True)
-# ==========SAFETY==============
+# ========== SAFETY ==============
 # =>
-def bumperProc(msg):
+def bumper_callback(msg):
 
     global killSwitch
     killSwitch = msg.state
@@ -15,34 +15,34 @@ def bumperProc(msg):
 
     print('bumper {}'.format(killSwitch))
 # <=
-# ==========SAFETY==============
+# ========== SAFETY ==============
 
-# ==========POHYB==============
+# ========== MOVEMENT ==============
 # =>
-def jizdaDopreduO(rychlost,cas):
+def drive_forward_for(speed, duration):
     
     rate = Rate(10)
     t = get_time()
 
-    while (get_time() - t < cas) and killSwitch == 0:
-        turtle.cmd_velocity(linear=rychlost)
+    while (get_time() - t < duration) and killSwitch == 0:
+        turtle.cmd_velocity(linear=speed)
         rate.sleep()
 # <= 
-# ==========POHYB==============
+# ========== MOVEMENT ==============
 
-# ==========Detect objects==============
+# ========== DETECT OBJECTS ==============
 # =>
-def how_many(turtle):
+def count_objects(turtle):
     objects = vision.detect_objects_by_hsv_and_area(turtle)
     print('{} objects detected.'.format(len(objects)))
 
 # <= 
-# ==========Detect objects==============
+# ========== DETECT OBJECTS ==============
 def main():
 
-    turtle.register_bumper_event_cb(bumperProc)
+    turtle.register_bumper_event_cb(bumper_callback)
     
-    how_many(turtle)
+    count_objects(turtle)
 
     
 

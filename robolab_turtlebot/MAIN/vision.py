@@ -29,8 +29,8 @@ def pointCloud(turtle):
     print('Point at 20,20: {}'.format(pc[20, 20, :]))
 
 def get_hsv(turtle):
-    """Vrati HSV obraz z kamery Turtlebotu."""
-    turtle.wait_for_rgb_image()  # pocka na prvni frame
+    """Return an HSV image from the Turtlebot RGB camera."""
+    turtle.wait_for_rgb_image()  # Wait for the first frame.
     rgb_image = turtle.get_rgb_image()
     if rgb_image is None:
         return None
@@ -44,9 +44,9 @@ def create_hsv_mask(hsv_image, min_h=18, max_h=55, min_s=35, max_s=121, min_v=0,
 
 
 def find_centroids(mask, max_area, min_area):
-    """Return connected components filtered by area interval [min_area, max_area]."""
+    """Return centroids (cx, cy) of connected components with area in [min_area, max_area]."""
 
-    num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask)
+    num_labels, _, stats, centroids = cv2.connectedComponentsWithStats(mask)
 
     chosen = []
     for label in range(1, num_labels):  # label 0 is background
@@ -57,14 +57,14 @@ def find_centroids(mask, max_area, min_area):
     return chosen
 
 
-def detect_objects_by_hsv_and_area(turtle, max_area = 700, min_area = 42):
-    """Return objects centeroid in cx, cy"""
+def detect_objects_by_hsv_and_area(turtle, max_area=700, min_area=42):
+    """Return a list of object centroids (cx, cy) detected in the configured HSV range."""
     hsv = get_hsv(turtle)
     if hsv is None:
         return []
 
     mask = create_hsv_mask(hsv, min_h=18, max_h=55, min_s=35, max_s=121, min_v=0, max_v=255)
 
-    objects_centeroid = find_centroids(mask, max_area, min_area)
-    return objects_centeroid
+    object_centroids = find_centroids(mask, max_area, min_area)
+    return object_centroids
 
