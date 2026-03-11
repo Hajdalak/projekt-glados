@@ -1,5 +1,6 @@
 from __future__ import print_function
 from robolab_turtlebot import Turtlebot, Rate, get_time
+import vision
 
 killSwitch = 0
 turtle = Turtlebot()
@@ -14,6 +15,8 @@ def bumperProc(msg):
 
     print('bumper {}'.format(killSwitch))
 # <=
+# ==========SAFETY==============
+
 # ==========POHYB==============
 # =>
 def jizdaDopreduO(rychlost,cas):
@@ -24,25 +27,23 @@ def jizdaDopreduO(rychlost,cas):
     while (get_time() - t < cas) and killSwitch == 0:
         turtle.cmd_velocity(linear=rychlost)
         rate.sleep()
-
-# def jizdaDokud(rychlost, podminka):
-
-#     while podminka:
-#         #doladit cas dle realneho testu
-#         jizdaDopreduO(rychlost,0.1)
-# # <=        
+# <= 
 # ==========POHYB==============
-# ==========SMYSL==============
+
+# ==========Detect objects==============
 # =>
-# <=
-# ==========SMYSL==============
+def how_many(turtle):
+    objects = vision.detect_objects_by_hsv_and_area(turtle)
+    print('{} objects detected.'.format(len(objects)))
+
+# <= 
+# ==========Detect objects==============
 def main():
 
     turtle.register_bumper_event_cb(bumperProc)
-    jizdaDopreduO(1,10)
     
+    how_many(turtle)
 
-    
     
 
 if __name__ == '__main__':
