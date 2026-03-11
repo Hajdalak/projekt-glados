@@ -1,9 +1,9 @@
 from __future__ import print_function
 from robolab_turtlebot import Turtlebot, Rate, get_time
-import vision
+from MAIN import vision
 
 killSwitch = 0
-turtle = Turtlebot()
+turtle = Turtlebot(rgb=True)
 # ==========SAFETY==============
 # =>
 def bumperProc(msg):

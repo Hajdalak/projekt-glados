@@ -30,10 +30,11 @@ def pointCloud(turtle):
 
 def get_hsv(turtle):
     """Vrati HSV obraz z kamery Turtlebotu."""
+    turtle.wait_for_rgb_image()  # pocka na prvni frame
     rgb_image = turtle.get_rgb_image()
-
+    if rgb_image is None:
+        return None
     return cv2.cvtColor(rgb_image, cv2.COLOR_BGR2HSV)
-
 
 def create_hsv_mask(hsv_image, min_h=18, max_h=55, min_s=35, max_s=121, min_v=0, max_v=255):
     """Create a binary mask for pixels inside the given HSV interval."""
@@ -59,6 +60,9 @@ def find_centroids(mask, max_area, min_area):
 def detect_objects_by_hsv_and_area(turtle, max_area = 700, min_area = 42):
     """Return objects centeroid in cx, cy"""
     hsv = get_hsv(turtle)
+    if hsv is None:
+        return []
+
     mask = create_hsv_mask(hsv, min_h=18, max_h=55, min_s=35, max_s=121, min_v=0, max_v=255)
 
     objects_centeroid = find_centroids(mask, max_area, min_area)
