@@ -4,7 +4,7 @@ import vision
 import movement
 
 killSwitch = 0
-turtle = Turtlebot(rgb=True)
+turtle = Turtlebot(rgb=True, pc = True)
 # ========== SAFETY ==============
 # =>
 def bumper_callback(msg):
@@ -97,7 +97,6 @@ def center_on_object(turtle, cx, image_width=640, tolerance=20, kp=0.005):
 def main():
 
     turtle.register_bumper_event_cb(bumper_callback)
-    turtle(pc=True)
 
     cx, cy = find_ball(turtle)
     objects = [(cx, cy)]
