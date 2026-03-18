@@ -181,8 +181,8 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
     print("jsem ve vision.get_average_3d_point.")
 
     
-    pc = turtle.get_point_cloud()
     turtle.wait_for_point_cloud()
+    pc = turtle.get_point_cloud()
 
     print("Proběhly funkce get point cloud.")
 
@@ -217,6 +217,12 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
         return None
         
     avg_point = np.nanmean(valid_points, axis=0)
-    
-    print("Vzdálenost k míčku: {:.2f}" .format(avg_point))
+
+    print(
+        "3D bod míčku: X={:.2f}, Y={:.2f}, Z={:.2f} m".format(
+            float(avg_point[0]),
+            float(avg_point[1]),
+            float(avg_point[2]),
+        )
+    )
     return avg_point
