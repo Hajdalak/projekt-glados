@@ -59,6 +59,8 @@ def maneuver_start_face_ball(turtle,
         drive_straight(turtle, rate, dist_m=side_m, v=v)
         rotate_by(turtle, rate, delta_rad=+math.radians(60), w=w)
 
+    drive_straight(turtle, rate, dist_m=side_m/2, v=v)
+    rotate_by(turtle, rate, delta_rad=math.radians(-90), w=w)
     stop(turtle)
 
 def main():
