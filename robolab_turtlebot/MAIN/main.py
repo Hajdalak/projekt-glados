@@ -85,7 +85,6 @@ def center_on_object(turtle, cx, image_width=640, tolerance=20, kp=0.005):
         
 
         turtle.cmd_velocity(angular=direction * angular_vel)
-        print("NE-vycentroval jsem se na míček.")
         return False
     else:
         turtle.cmd_velocity(angular=0.0)
