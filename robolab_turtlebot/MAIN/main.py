@@ -99,16 +99,18 @@ def main():
     turtle.register_bumper_event_cb(bumper_callback)
 
     cx, cy = find_ball(turtle)
+    objects = [(cx, cy)]
 
     
     # Opakujeme centering dokud neni robot vystreden na micek
     while not center_on_object(turtle, cx) and killSwitch == 0:
         # Po kazdem kroku centering aktualizujeme pozici micku
-        objects = vision.detect_objects_by_hsv_and_area(turtle)
-        if objects:
-            cx, cy = float(objects[0][0]), float(objects[0][1])
+        detected_objects = vision.detect_objects_by_hsv_and_area(turtle)
+        if detected_objects:
+            cx, cy = float(detected_objects[0][0]), float(detected_objects[0][1])
+            objects = [(cx, cy)]
 
-    movement.drive_to_ball(turtle, 0.3, objects)
+    movement.drive_to_ball(turtle, objects)
 
 
 
