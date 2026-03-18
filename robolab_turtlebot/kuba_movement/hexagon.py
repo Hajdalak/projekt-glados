@@ -2,6 +2,9 @@ from __future__ import print_function
 import math
 from robolab_turtlebot import Turtlebot, Rate
 
+killSwitch = 0
+turtle_ref = None
+
 def wrap_pi(a):
     while a > math.pi: 
         a -= 2.0 * math.pi
@@ -12,11 +15,19 @@ def wrap_pi(a):
 def stop(turtle):
     turtle.cmd_velocity(0.0, 0.0)
 
+
+def bumper_callback(msg):
+    global killSwitch
+    killSwitch = msg.state
+    if turtle_ref is not None:
+        turtle_ref.cmd_velocity(0.0, 0.0)
+    print('bumper {}'.format(killSwitch))
+
 def rotate_by(turtle, rate, delta_rad, w=0.8, tol=0.06):
 
     _, _, a0 = turtle.get_odometry()
     target = wrap_pi(a0 + delta_rad)
-    while not turtle.is_shutting_down():
+    while not turtle.is_shutting_down() and killSwitch == 0:
         _, _, a = turtle.get_odometry()
         err = wrap_pi(target - a)
         if abs(err) < tol:
@@ -28,7 +39,7 @@ def rotate_by(turtle, rate, delta_rad, w=0.8, tol=0.06):
 
 def drive_straight(turtle, rate, dist_m, v=0.18, tol=0.03):
     x0, y0, _ = turtle.get_odometry()
-    while not turtle.is_shutting_down():
+    while not turtle.is_shutting_down() and killSwitch == 0:
         x, y, _ = turtle.get_odometry()
         d = math.hypot(x - x0, y - y0)
         if d >= dist_m - tol:
@@ -55,19 +66,36 @@ def maneuver_start_face_ball(turtle,
     
     # 1) 60° doprava (entry)
     rotate_by(turtle, rate, delta_rad=math.radians(-60), w=w)
+    if killSwitch != 0:
+        stop(turtle)
+        return
 
     # 2) hexagon: 6x (rovně + 60° doleva)
     for i in range(5):
+        if killSwitch != 0:
+            break
         drive_straight(turtle, rate, dist_m=side_m, v=v)
+        if killSwitch != 0:
+            break
         rotate_by(turtle, rate, delta_rad=+math.radians(60), w=w)
 
+    if killSwitch != 0:
+        stop(turtle)
+        return
+
     drive_straight(turtle, rate, dist_m=side_m/2, v=v)
+    if killSwitch != 0:
+        stop(turtle)
+        return
     rotate_by(turtle, rate, delta_rad=math.radians(-90), w=w)
     stop(turtle)
 
 def main():
+    global turtle_ref
     turtle = Turtlebot()
+    turtle_ref = turtle
     turtle.reset_odometry()
+    turtle.register_bumper_event_cb(bumper_callback)
 
     # Robota postav 30 cm před míček čelem k míčku, pak spusť:
     maneuver_start_face_ball(turtle, side_m=0.40, v=0.18, w=0.8)
