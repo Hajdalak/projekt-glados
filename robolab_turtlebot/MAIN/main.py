@@ -100,6 +100,7 @@ def main():
 
     cx, cy = find_ball(turtle)
 
+    
     # Opakujeme centering dokud neni robot vystreden na micek
     while not center_on_object(turtle, cx) and killSwitch == 0:
         # Po kazdem kroku centering aktualizujeme pozici micku
@@ -107,7 +108,7 @@ def main():
         if objects:
             cx, cy = float(objects[0][0]), float(objects[0][1])
 
-    movement.drive_to_ball(turtle, 0.3)
+    movement.drive_to_ball(turtle, 0.3, objects)
 
 
 

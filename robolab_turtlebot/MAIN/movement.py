@@ -27,20 +27,23 @@ def drive_forward_for(speed, duration):
         turtle.cmd_velocity(linear=speed)
         rate.sleep()
 
-def drive_to_ball(turtle, target_distance=0.1):
+def drive_to_ball(turtle, objects, target_distance=0.1):
     """
     Zmeri vzdalenost k micku, dopocita dobu jizdy pro funkci drive_forward_for,
     pojede, a pote provede kontrolni mereni a doladeni pozice.
     """
-    objects = vision.detect_objects_by_hsv_and_area(turtle)
+
+    # delete later if not needed
+    #objects = vision.detect_objects_by_hsv_and_area(turtle)
+
     if len(objects) == 0:
         print("Nevidim micek pro mereni vzdalenosti.")
         return
         
     cx, cy = objects[0]
+    print("Získávám vzdálenost odmíčku.")
     avg_point = vision.get_average_3d_point(turtle, cx, cy)
-    print("Vzdálenost k míčku: {:.2f}" .format(avg_point))
-
+    
     if avg_point is not None:
         current_z = avg_point[2]
         distance_to_travel = current_z - target_distance

@@ -178,6 +178,8 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
     """
     Ziska prumernou 3D souradnici (X, Y, Z) z okoli zadaneho centroidu v Point Cloudu.
     """
+    print("jsem ve vision.get_average_3d_point.")
+
     turtle.wait_for_point_cloud()
     pc = turtle.get_point_cloud()
     
@@ -208,8 +210,10 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
     
     # Kontrola, zda okno neobsahuje pouze NaN hodnoty
     if np.all(np.isnan(valid_points)):
+        print("Vidim Nan.")
         return None
         
     avg_point = np.nanmean(valid_points, axis=0)
     
+    print("Vzdálenost k míčku: {:.2f}" .format(avg_point))
     return avg_point
