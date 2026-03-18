@@ -59,37 +59,6 @@ def find_ball(turtle):
     # objects[0] je numpy pole [cx, cy] — rozbalime na pojmenovane hodnoty
     cx, cy = float(objects[0][0]), float(objects[0][1])
     return cx, cy
-        
-
-def center_on_object(turtle, cx, image_width=640, tolerance=20, kp=0.005):
-    """
-    Natoci robota tak, aby byl zadany bod (cx) uprostred obrazu.
-    Pouziva proporcionalni rizeni (P-regulator) pro plynule zastaveni.
-    Vrati True, pokud je robot vystreden, jinak False.
-    """
-    print("Centruju se na míček.")
-
-    center_x = image_width / 2.0
-    error = center_x - cx
-
-    if abs(error) > tolerance:
-        angular_vel = abs(error) * kp
-        
-        #maximalni rychlost
-        max_vel = 0.5 
-        if angular_vel > max_vel:
-            angular_vel = max_vel
-            
-        #smer
-        direction = 1 if error > 0 else -1
-        
-
-        turtle.cmd_velocity(angular=direction * angular_vel)
-        return False
-    else:
-        turtle.cmd_velocity(angular=0.0)
-        print("Vycentroval jsem se na míček.")
-        return True
 
 # <= 
 # ========== DETECT OBJECTS ==============
@@ -97,17 +66,14 @@ def main():
 
     turtle.register_bumper_event_cb(bumper_callback)
 
-    cx, cy = find_ball(turtle)
-    objects = [(cx, cy)]
+    find_ball(turtle)
+    centered = movement.recenter_to_ball(turtle)
+    if centered is None:
+        print("Micek nelze vystredit, koncim.")
+        return
 
-    
-    # Opakujeme centering dokud neni robot vystreden na micek
-    while not center_on_object(turtle, cx) and killSwitch == 0:
-        # Po kazdem kroku centering aktualizujeme pozici micku
-        detected_objects = vision.detect_objects_by_hsv_and_area(turtle)
-        if detected_objects:
-            cx, cy = float(detected_objects[0][0]), float(detected_objects[0][1])
-            objects = [(cx, cy)]
+    cx, cy = centered
+    objects = [(cx, cy)]
 
     movement.drive_to_ball(turtle, objects)
 
