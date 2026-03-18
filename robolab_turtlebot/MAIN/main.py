@@ -46,7 +46,7 @@ def main():
 
     turtle.register_bumper_event_cb(bumper_callback)
 
-    show_detected_objects(turtle)
+    count_objects(turtle)
 
     
 
