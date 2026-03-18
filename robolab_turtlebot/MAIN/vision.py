@@ -57,7 +57,7 @@ def find_centroids(mask, max_area, min_area):
     return chosen
 
 
-def detect_objects_by_hsv_and_area(turtle, max_area=700, min_area=42):
+def detect_objects_by_hsv_and_area(turtle, max_area=700, min_area=300):
     """Return a list of object centroids (cx, cy) detected in the configured HSV range."""
     hsv = get_hsv(turtle)
     if hsv is None:
