@@ -46,7 +46,7 @@ def drive_to_ball(turtle, target_distance=0.1):
         
         if distance_to_travel > 0:
             speed = 0.15  # Rychlost v m/s
-            duration = distance_to_travel / speed
+            duration = distance_to_travel // speed
             
             print("Zmerena hloubka: {:.2f} m. Jedu vpred {:.2f} m.".format(current_z, distance_to_travel))
             # Pouziti tvoji existujici funkce
