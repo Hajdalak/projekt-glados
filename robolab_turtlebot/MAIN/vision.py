@@ -36,7 +36,7 @@ def get_hsv(turtle):
         return None
     return cv2.cvtColor(rgb_image, cv2.COLOR_BGR2HSV)
 
-def create_hsv_mask(hsv_image, min_h=18, max_h=55, min_s=35, max_s=121, min_v=0, max_v=255):
+def create_hsv_mask(hsv_image, min_h=20, max_h=53, min_s=38, max_s=118, min_v=0, max_v=255):
     """Create a binary mask for pixels inside the given HSV interval."""
     lower = np.array([min_h, min_s, min_v], dtype=np.uint8)
     upper = np.array([max_h, max_s, max_v], dtype=np.uint8)
