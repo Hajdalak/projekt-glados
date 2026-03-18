@@ -52,7 +52,7 @@ def maneuver_start_face_ball(turtle,
     rate = Rate(10)
 
     # 1) 60° doprava (entry)
-    rotate_by(turtle, rate, delta_rad=+math.radians(-60), w=w)
+    rotate_by(turtle, rate, delta_rad=math.radians(-60), w=w)
 
     # 2) hexagon: 6x (rovně + 60° doleva)
     for i in range(5):
