@@ -110,7 +110,7 @@ def detect_objects_with_debug_frame(
         return [], None, None
 
     hsv = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2HSV)
-    mask = create_hsv_mask(hsv, min_h=18, max_h=55, min_s=35, max_s=121, min_v=0, max_v=255)
+    mask = create_hsv_mask(hsv)
     object_centroids = find_centroids(mask, max_area, min_area, axis_tolerance=axis_tolerance)
 
     annotated = rgb_image.copy()
