@@ -183,6 +183,8 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
     turtle.wait_for_point_cloud()
     pc = turtle.get_point_cloud()
     
+    print("Proběhly funkce get point cloud.")
+
     if pc is None:
         return None
         
