@@ -1,6 +1,7 @@
 from __future__ import print_function
 from robolab_turtlebot import Turtlebot, Rate, get_time
 import vision
+import movement
 
 killSwitch = 0
 turtle = Turtlebot(rgb=True)
@@ -99,6 +100,9 @@ def main():
         objects = vision.detect_objects_by_hsv_and_area(turtle)
         if objects:
             cx, cy = float(objects[0][0]), float(objects[0][1])
+
+    movement.drive_to_ball(turtle, 0.3)
+
 
 
 if __name__ == '__main__':
