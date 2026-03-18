@@ -53,6 +53,8 @@ def find_ball(turtle):
     while len(objects) == 0 and killSwitch == 0:
         turtle.cmd_velocity(angular=0.3)
         objects = vision.detect_objects_by_hsv_and_area(turtle)
+        
+    print("Našel jsem míček.")
 
     # objects[0] je numpy pole [cx, cy] — rozbalime na pojmenovane hodnoty
     cx, cy = float(objects[0][0]), float(objects[0][1])
@@ -65,6 +67,8 @@ def center_on_object(turtle, cx, image_width=640, tolerance=20, kp=0.005):
     Pouziva proporcionalni rizeni (P-regulator) pro plynule zastaveni.
     Vrati True, pokud je robot vystreden, jinak False.
     """
+    print("Centruju se na míček.")
+
     center_x = image_width / 2.0
     error = center_x - cx
 
@@ -81,9 +85,11 @@ def center_on_object(turtle, cx, image_width=640, tolerance=20, kp=0.005):
         
 
         turtle.cmd_velocity(angular=direction * angular_vel)
+        print("NE-vycentroval jsem se na míček.")
         return False
     else:
         turtle.cmd_velocity(angular=0.0)
+        print("Vycentroval jsem se na míček.")
         return True
 
 # <= 

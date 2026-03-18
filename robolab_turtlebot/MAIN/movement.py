@@ -39,7 +39,8 @@ def drive_to_ball(turtle, target_distance=0.1):
         
     cx, cy = objects[0]
     avg_point = vision.get_average_3d_point(turtle, cx, cy)
-    
+    print("Vzdálenost k míčku: {:.2f}" .format(avg_point))
+
     if avg_point is not None:
         current_z = avg_point[2]
         distance_to_travel = current_z - target_distance
