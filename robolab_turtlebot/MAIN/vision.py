@@ -180,9 +180,9 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
     """
     print("jsem ve vision.get_average_3d_point.")
 
-    turtle.wait_for_point_cloud()
     pc = turtle.get_point_cloud()
-    
+    turtle.wait_for_point_cloud()
+        
     print("Proběhly funkce get point cloud.")
 
     if pc is None:
