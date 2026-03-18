@@ -7,6 +7,7 @@ killSwitch = 0
 turtle = Turtlebot(rgb=True)
 
 RECENTER_STEP_M = 1
+
 # ========== SAFETY ==============
 # =>
 def bumper_callback(msg):
@@ -81,33 +82,47 @@ def drive_to_ball(turtle, objects, target_distance=0.1):
     avg_point = vision.get_average_3d_point(turtle, cx, cy)
     
     if avg_point is not None:
-        current_z = avg_point[2]
+        current_z = float(avg_point[2])
         distance_to_travel = current_z - target_distance
         
         if distance_to_travel > 0:
             speed = 0.15  # Rychlost v m/s
-            remaining = distance_to_travel
-
             print("Zmerena hloubka: {:.2f} m. Jedu vpred {:.2f} m.".format(current_z, distance_to_travel))
 
-            while remaining > 0.02 and killSwitch == 0:
-                step = min(RECENTER_STEP_M, remaining)
-                duration = step / speed
-                drive_forward_for(turtle, speed, duration)
-                turtle.cmd_velocity(linear=0.0, angular=0.0)
+            duration = distance_to_travel / speed
+            drive_forward_for(turtle, speed, duration)
 
-                centered = recenter_to_ball(turtle)
-                if centered is None:
-                    break
+            # --- Faze doladeni ---
+            print("Provadim kontrolu a doladeni...")
+            turtle.cmd_velocity(linear=0.0, angular=0.0)
 
+            objects = vision.detect_objects_by_hsv_and_area(turtle)
+            if len(objects) > 0:
+                cx, cy = float(objects[0][0]), float(objects[0][1])
+                avg_point = vision.get_average_3d_point(turtle, cx, cy)
+
+                if avg_point is not None:
+                    current_z = float(avg_point[2])
+                    error_dist = current_z - target_distance
+
+                    # Pokud je porad vic jak 2 cm daleko od cile, popojede
+                    if error_dist > 0.02 and killSwitch == 0:
+                        print("Doladuji o {:.2f} m.".format(error_dist))
+                        duration_fine = error_dist / speed
+                        drive_forward_for(turtle, speed, duration_fine)
+
+            # Konec funkce: znovu vycentruj a kdyz je jeste daleko, dojed ke micku.
+            centered = recenter_to_ball(turtle)
+            if centered is not None and killSwitch == 0:
                 cx, cy = centered
                 avg_point = vision.get_average_3d_point(turtle, cx, cy)
-                if avg_point is None:
-                    break
-
-                current_z = float(avg_point[2])
-                remaining = current_z - target_distance
-                print("Aktualni vzdalenost po centrovani: {:.2f} m".format(current_z))
+                if avg_point is not None:
+                    current_z = float(avg_point[2])
+                    final_error_dist = current_z - target_distance
+                    if final_error_dist > 0.02:
+                        print("Po vycentrovani dojizdim o {:.2f} m.".format(final_error_dist))
+                        duration_last = final_error_dist / speed
+                        drive_forward_for(turtle, speed, duration_last)
                         
     turtle.cmd_velocity(linear=0.0)
     turtle.cmd_velocity(angular=0.0)
