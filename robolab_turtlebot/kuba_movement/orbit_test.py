@@ -16,7 +16,7 @@ def wrap_pi(a): # prevedeni uhlu do -pi do pi, protoze a je v rad
 def stop(turtle):
     turtle.cmd_velocity(0.0, 0.0)
 
-def rotate_by(turtle, rate, delta_rad, w=0.5, tol=0.05):
+def rotate_by(turtle, rate, delta_rad, w=1.0, tol=0.05):
     """Rotate in place by delta_rad (rad) using odometry."""
     _, _, a0 = turtle.get_odometry()
     target = wrap_pi(a0 + delta_rad)
@@ -30,7 +30,7 @@ def rotate_by(turtle, rate, delta_rad, w=0.5, tol=0.05):
         rate.sleep()
     stop(turtle)
 
-def drive_straight(turtle, rate, dist_m, v=0.12, tol=0.02):
+def drive_straight(turtle, rate, dist_m, v=0.5, tol=0.02):
     """Drive straight by dist_m using odometry."""
     x0, y0, _ = turtle.get_odometry() # startovni bod
     while not turtle.is_shutting_down():
