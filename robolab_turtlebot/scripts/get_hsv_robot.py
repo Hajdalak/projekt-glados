@@ -99,7 +99,6 @@ def main():
 
 		cv2.imshow(WINDOW_MAIN, highlight)
 		cv2.imshow(WINDOW_MASK, mask)
-		cv2.imshow(WINDOW_FILTERED, filtered_mask)
 
 		key = cv2.waitKey(1) & 0xFF
 		if key == ord('q'):
