@@ -66,7 +66,7 @@ def main():
     turtle.reset_odometry()
 
     # Robota postav 30 cm před míček čelem k míčku, pak spusť:
-    maneuver_start_face_ball(turtle, side_m=0.30, v=0.18, w=0.8)
+    maneuver_start_face_ball(turtle, side_m=0.40, v=0.18, w=0.8)
 
 if __name__ == "__main__":
     main()
