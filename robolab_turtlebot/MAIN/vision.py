@@ -43,7 +43,7 @@ def create_hsv_mask(hsv_image, min_h=20, max_h=53, min_s=38, max_s=118, min_v=0,
     return cv2.inRange(hsv_image, lower, upper).astype(np.uint8)
 
 
-def find_centroids(mask, max_area, min_area, axis_tolerance = 0.9):
+def find_centroids(mask, max_area, min_area, axis_tolerance = 0.3):
     """Return centroids (cx, cy) of connected components with area in [min_area, max_area]."""
 
     num_labels, _, stats, centroids = cv2.connectedComponentsWithStats(mask)
@@ -55,7 +55,7 @@ def find_centroids(mask, max_area, min_area, axis_tolerance = 0.9):
             width = stats[label, cv2.CC_STAT_WIDTH]
             height = stats[label, cv2.CC_STAT_HEIGHT]
             axis_ratio = min(width, height) / float(max(width, height))
-            if axis_ratio < axis_tolerance:
+            if axis_ratio >= axis_tolerance:
                 chosen.append(centroids[label])
     return chosen
 
@@ -70,6 +70,74 @@ def detect_objects_by_hsv_and_area(turtle, max_area=700, min_area=300):
 
     object_centroids = find_centroids(mask, max_area, min_area)
     return object_centroids
+
+
+def detect_objects_with_debug_frame(turtle, max_area=700, min_area=300, axis_tolerance=0.3):
+    """Return centroids, annotated RGB frame and binary mask for debugging."""
+    turtle.wait_for_rgb_image()
+    rgb_image = turtle.get_rgb_image()
+    if rgb_image is None:
+        return [], None, None
+
+    hsv = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2HSV)
+    mask = create_hsv_mask(hsv, min_h=18, max_h=55, min_s=35, max_s=121, min_v=0, max_v=255)
+    object_centroids = find_centroids(mask, max_area, min_area, axis_tolerance=axis_tolerance)
+
+    annotated = rgb_image.copy()
+    for cx, cy in object_centroids:
+        center = (int(round(cx)), int(round(cy)))
+        cv2.circle(annotated, center, 12, (0, 255, 0), 2)
+        cv2.circle(annotated, center, 3, (0, 0, 255), -1)
+        cv2.putText(
+            annotated,
+            'obj ({}, {})'.format(center[0], center[1]),
+            (center[0] + 8, max(18, center[1] - 8)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (255, 255, 255),
+            1,
+            cv2.LINE_AA,
+        )
+
+    cv2.putText(
+        annotated,
+        'Objects: {}'.format(len(object_centroids)),
+        (10, 24),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (0, 255, 255),
+        2,
+        cv2.LINE_AA,
+    )
+
+    return object_centroids, annotated, mask
+
+
+def show_detection_stream(turtle, max_area=700, min_area=300, axis_tolerance=0.3):
+    """Open live windows with robot RGB view and detected objects. Press q to quit."""
+    print("Opening detection preview. Press 'q' in image window to quit.")
+
+    rate = Rate(15)
+    while True:
+        object_centroids, annotated, mask = detect_objects_with_debug_frame(
+            turtle,
+            max_area=max_area,
+            min_area=min_area,
+            axis_tolerance=axis_tolerance,
+        )
+
+        if annotated is not None:
+            cv2.imshow('Robot view - detected objects', annotated)
+        if mask is not None:
+            cv2.imshow('HSV mask', mask)
+
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
+            break
+
+        rate.sleep()
+
+    cv2.destroyAllWindows()
 
 def get_average_3d_point(turtle, cx, cy, window_size=5):
     """

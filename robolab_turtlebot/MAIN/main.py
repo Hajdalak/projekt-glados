@@ -36,13 +36,17 @@ def count_objects(turtle):
     objects = vision.detect_objects_by_hsv_and_area(turtle)
     print('{} objects detected.'.format(len(objects)))
 
+
+def show_detected_objects(turtle):
+    vision.show_detection_stream(turtle)
+
 # <= 
 # ========== DETECT OBJECTS ==============
 def main():
 
     turtle.register_bumper_event_cb(bumper_callback)
-    
-    count_objects(turtle)
+
+    show_detected_objects(turtle)
 
     
 
