@@ -3,6 +3,8 @@ from robolab_turtlebot import Turtlebot, Rate, get_time
 import cv2
 import numpy as np
 
+turtle = Turtlebot(rgb=True)
+
 # Tuned for the green ball in current lab lighting.
 BALL_MIN_H = 37
 BALL_MAX_H = 74
@@ -226,3 +228,12 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
         )
     )
     return avg_point
+
+
+def main():
+
+    show_detection_stream(turtle)
+
+
+if __name__ == '__main__':
+    main()
