@@ -40,15 +40,66 @@ def count_objects(turtle):
 def show_detected_objects(turtle):
     vision.show_detection_stream(turtle)
 
+def find_ball(turtle):
+    """
+    Otaci se na miste, dokud nenajde zeleny micek. 
+    Jakmile ho detekuje, zastavi a vycentruje se na nej.
+    """
+    print("Hledam micek...")
+    objects = vision.detect_objects_by_hsv_and_area(turtle)
+    
+    # Faze 1: Otaceni dokud nic nevidime
+    while len(objects) == 0 and killSwitch == 0:
+        turtle.cmd_velocity(angular=0.3)
+        objects = vision.detect_objects_by_hsv_and_area(turtle)
+
+    # objects[0] je numpy pole [cx, cy] — rozbalime na pojmenovane hodnoty
+    cx, cy = float(objects[0][0]), float(objects[0][1])
+    return cx, cy
+        
+
+def center_on_object(turtle, cx, image_width=640, tolerance=20, kp=0.005):
+    """
+    Natoci robota tak, aby byl zadany bod (cx) uprostred obrazu.
+    Pouziva proporcionalni rizeni (P-regulator) pro plynule zastaveni.
+    Vrati True, pokud je robot vystreden, jinak False.
+    """
+    center_x = image_width / 2.0
+    error = center_x - cx
+
+    if abs(error) > tolerance:
+        angular_vel = abs(error) * kp
+        
+        #maximalni rychlost
+        max_vel = 0.5 
+        if angular_vel > max_vel:
+            angular_vel = max_vel
+            
+        #smer
+        direction = 1 if error > 0 else -1
+        
+
+        turtle.cmd_velocity(angular=direction * angular_vel)
+        return False
+    else:
+        turtle.cmd_velocity(angular=0.0)
+        return True
+
 # <= 
 # ========== DETECT OBJECTS ==============
 def main():
 
     turtle.register_bumper_event_cb(bumper_callback)
 
-    count_objects(turtle)
+    cx, cy = find_ball(turtle)
 
-    
+    # Opakujeme centering dokud neni robot vystreden na micek
+    while not center_on_object(turtle, cx) and killSwitch == 0:
+        # Po kazdem kroku centering aktualizujeme pozici micku
+        objects = vision.detect_objects_by_hsv_and_area(turtle)
+        if objects:
+            cx, cy = float(objects[0][0]), float(objects[0][1])
+
 
 if __name__ == '__main__':
     main()
