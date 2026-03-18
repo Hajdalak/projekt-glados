@@ -55,7 +55,7 @@ def maneuver_start_face_ball(turtle,
     rotate_by(turtle, rate, delta_rad=math.radians(-60), w=w)
 
     # 2) hexagon: 6x (rovně + 60° doleva)
-    for i in range(6):
+    for i in range(5):
         drive_straight(turtle, rate, dist_m=side_m, v=v)
         rotate_by(turtle, rate, delta_rad=+math.radians(60), w=w)
 
