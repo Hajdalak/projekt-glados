@@ -13,6 +13,7 @@ def stop(turtle):
     turtle.cmd_velocity(0.0, 0.0)
 
 def rotate_by(turtle, rate, delta_rad, w=0.8, tol=0.06):
+
     _, _, a0 = turtle.get_odometry()
     target = wrap_pi(a0 + delta_rad)
     while not turtle.is_shutting_down():
@@ -50,7 +51,8 @@ def maneuver_start_face_ball(turtle,
       2) repeat 6x: drive side_m, rotate 60° LEFT
     """
     rate = Rate(10)
-
+    turtle.reset_odometry()
+    
     # 1) 60° doprava (entry)
     rotate_by(turtle, rate, delta_rad=math.radians(-60), w=w)
 
