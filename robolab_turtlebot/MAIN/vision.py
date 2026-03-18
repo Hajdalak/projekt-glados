@@ -4,9 +4,9 @@ import cv2
 import numpy as np
 
 # Tuned for the green ball in current lab lighting.
-BALL_MIN_H = 40
-BALL_MAX_H = 86
-BALL_MIN_S = 80
+BALL_MIN_H = 37
+BALL_MAX_H = 74
+BALL_MIN_S = 98
 BALL_MAX_S = 255
 BALL_MIN_V = 35
 BALL_MAX_V = 255
