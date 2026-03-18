@@ -6,7 +6,7 @@ import vision
 killSwitch = 0
 turtle = Turtlebot(rgb=True)
 
-RECENTER_STEP_M = 0.30
+RECENTER_STEP_M = 1
 # ========== SAFETY ==============
 # =>
 def bumper_callback(msg):
@@ -85,7 +85,7 @@ def drive_to_ball(turtle, objects, target_distance=0.1):
         distance_to_travel = current_z - target_distance
         
         if distance_to_travel > 0:
-            speed = 0.15  # Rychlost v m/s
+            speed = 0.3  # Rychlost v m/s
             remaining = distance_to_travel
 
             print("Zmerena hloubka: {:.2f} m. Jedu vpred {:.2f} m.".format(current_z, distance_to_travel))
