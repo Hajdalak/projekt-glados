@@ -75,7 +75,7 @@ def main():
     cx, cy = centered
     objects = [(cx, cy)]
 
-    movement.drive_to_ball(turtle, objects)
+    movement.drive_to_ball(turtle, objects,0.3)
 
 
 
