@@ -43,7 +43,7 @@ def create_hsv_mask(hsv_image, min_h=20, max_h=53, min_s=38, max_s=118, min_v=0,
     return cv2.inRange(hsv_image, lower, upper).astype(np.uint8)
 
 
-def find_centroids(mask, max_area, min_area, axis_tolerance = 0.8):
+def find_centroids(mask, max_area, min_area, axis_tolerance = 0.9):
     """Return centroids (cx, cy) of connected components with area in [min_area, max_area]."""
 
     num_labels, _, stats, centroids = cv2.connectedComponentsWithStats(mask)
