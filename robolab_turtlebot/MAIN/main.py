@@ -5,6 +5,12 @@ import movement
 
 killSwitch = 0
 turtle = Turtlebot(rgb=True, pc = True)
+
+
+def is_stop_requested():
+    """Return True when the global safety stop (killSwitch) is active."""
+    return killSwitch != 0
+
 # ========== SAFETY ==============
 # =>
 def bumper_callback(msg):
@@ -12,9 +18,9 @@ def bumper_callback(msg):
     global killSwitch
     killSwitch = msg.state
 
-    turtle.cmd_velocity(linear=0)
+    turtle.cmd_velocity(linear = 0, angular = 0)
 
-    print('bumper {}'.format(killSwitch))
+    print('bumper {}. Do něčeho jsem narazil.'.format(killSwitch))
 # <=
 # ========== SAFETY ==============
 
@@ -53,7 +59,12 @@ def find_ball(turtle):
     while len(objects) == 0 and killSwitch == 0:
         turtle.cmd_velocity(angular=0.3)
         objects = vision.detect_objects_by_hsv_and_area(turtle)
-        
+    
+    #If smt stopped the robot
+    if killSwitch != 0:
+        turtle.cmd_velocity(linear=0.0, angular=0.0)
+        return None
+    
     print("Našel jsem míček.")
 
     # objects[0] je numpy pole [cx, cy] — rozbalime na pojmenovane hodnoty
@@ -66,7 +77,11 @@ def main():
 
     turtle.register_bumper_event_cb(bumper_callback)
 
-    find_ball(turtle)
+    ball_center = find_ball(turtle)
+    if ball_center is None:
+        print("Byl aktivovan killSwitch, koncim.")
+        return
+
     centered = movement.recenter_to_ball(turtle)
     if centered is None:
         print("Micek nelze vystredit, koncim.")
@@ -75,7 +90,7 @@ def main():
     cx, cy = centered
     objects = [(cx, cy)]
 
-    movement.drive_to_ball(turtle, objects,0.3)
+    movement.drive_to_ball(turtle, objects, 0.3, stop_requested=is_stop_requested)
 
 
 
