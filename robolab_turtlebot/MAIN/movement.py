@@ -44,12 +44,19 @@ def drive_forward_for(turtle, speed, duration, stop_requested=None):
         turtle.cmd_velocity(linear=speed)
         rate.sleep()
 
+    if should_stop(stop_requested):
+        print("Jizda prerusena: byl pozadovan stop.")
+
 
 def recenter_between_two_objects(turtle, image_width=640, tolerance=20, kp=0.005, stop_requested=None):
     """Center robot between two visible objects and return (mid_cx, mid_cy), or None if objects are lost."""
+    if should_stop(stop_requested):
+        print("Centrovani preskoceno: byl pozadovan stop.")
+        return None
+
     objects = vision.detect_objects_by_hsv_and_area(turtle)
     if len(objects) < 2:
-        print("Nevidim obe vezicky v obrazu.")
+        print("Centrovani selhalo: Nevidim obe vezicky v obrazu.")
         return None
 
     # Get X and Y coordinates of the first two detected objects.
@@ -78,7 +85,7 @@ def recenter_between_two_objects(turtle, image_width=640, tolerance=20, kp=0.005
 
         objects = vision.detect_objects_by_hsv_and_area(turtle)
         if len(objects) < 2:
-            print("Behem centrovani zmizela jedna nebo obe vezicky z obrazu.")
+            print("Centrovani preruseno: jeden nebo oba objekty zmizely ze zaberu.")
             turtle.cmd_velocity(angular=0.0)
             return None
             
@@ -104,13 +111,19 @@ def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop
         objects = vision.detect_objects_by_hsv_and_area(turtle)
         if len(objects) > 0 and not should_stop(stop_requested):
             cx, cy = float(objects[0][0]), float(objects[0][1])
-            print("Získávám vzdálenost odmíčku pro hranici {} m.".format(target_boundary))
+            print("Ziskavam vzdalenost od micku pro hranici {} m.".format(target_boundary))
             avg_point = vision.get_average_3d_point(turtle, cx, cy)
+        elif len(objects) == 0:
+            print("Krok priblizeni preskocen: cilovy micek neni videt.")
+        else:
+            print("Krok priblizeni preskocen: stop pred merenim vzdalenosti.")
     else:  # target_type == 'gate'
         center_cx, center_cy = 320.0, 240.0
         if not should_stop(stop_requested):
-            print("Získávám vzdálenost od zdi pro hranici {} m.".format(target_boundary))
+            print("Ziskavam vzdalenost od zdi pro hranici {} m.".format(target_boundary))
             avg_point = vision.get_average_3d_point(turtle, center_cx, center_cy)
+        else:
+            print("Krok priblizeni preskocen: stop pred merenim vzdalenosti.")
 
     if avg_point is not None:
         current_z = float(avg_point[2])
@@ -121,13 +134,15 @@ def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop
             duration = distance_to_travel / speed
             drive_forward_for(turtle, speed, duration, stop_requested=stop_requested)
             
-            print("Provádím centrování na {} m...".format(target_boundary))
+            print("Provadim centrovani na {} m...".format(target_boundary))
             turtle.cmd_velocity(linear=0.0, angular=0.0)
             
             if target_type == 'ball':
                 recenter_to_ball(turtle)
             else:
                 recenter_between_two_objects(turtle, stop_requested=stop_requested)
+    else:
+        print("Krok priblizeni preskocen: neni k dispozici platny hloubkovy bod.")
 
 def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop_requested=None):
     """
@@ -137,7 +152,11 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
     """
 
     if target_type == 'ball' and len(objects) == 0:
-        print("Nevidim micek pro mereni vzdalenosti.")
+        print("Jizda zrusena: pro pocatecni mereni neni detekovan micek.")
+        return
+
+    if should_stop(stop_requested):
+        print("Jizda zrusena: stop pred zacatkem sekvence.")
         return
         
     speed = 0.15  # Speed in m/s.
@@ -155,12 +174,18 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
         objects = vision.detect_objects_by_hsv_and_area(turtle)
         if len(objects) > 0 and not should_stop(stop_requested):
             cx, cy = float(objects[0][0]), float(objects[0][1])
-            print("Získávám vzdálenost odmíčku pro finální dojezd.")
+            print("Ziskavam vzdalenost od micku pro finalni dojezd.")
             avg_point = vision.get_average_3d_point(turtle, cx, cy)
+        elif len(objects) == 0:
+            print("Finalni dojezd preskocen: micek neni videt pro hloubkovou kontrolu.")
+        else:
+            print("Finalni dojezd preskocen: stop pred hloubkovou kontrolou.")
     else:
         if not should_stop(stop_requested):
-            print("Získávám vzdálenost od zdi pro finální dojezd.")
+            print("Ziskavam vzdalenost od zdi pro finalni dojezd.")
             avg_point = vision.get_average_3d_point(turtle, center_cx, center_cy)
+        else:
+            print("Finalni dojezd preskocen: stop pred hloubkovou kontrolou.")
             
     if avg_point is not None:
         current_z = float(avg_point[2])
@@ -195,6 +220,10 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
                     print("Doladuji o {:.2f} m.".format(error_dist))
                     duration_fine = error_dist / speed
                     drive_forward_for(turtle, speed, duration_fine, stop_requested=stop_requested)
+            else:
+                print("Jemne doladeni preskoceno: po kontrolnim zastaveni neni platny hloubkovy bod.")
+    else:
+        print("Finalni dojezd preskocen: neni k dispozici platny hloubkovy bod.")
 
     # End of function: re-center and, if still far, finish the approach.
     if target_type == 'ball':
@@ -216,7 +245,16 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
                 print("Po vycentrovani dojizdim o {:.2f} m.".format(final_error_dist))
                 duration_last = final_error_dist / speed
                 drive_forward_for(turtle, speed, duration_last, stop_requested=stop_requested)
+        else:
+            print("Kontrola po centrovani preskocena: neni platny hloubkovy bod.")
+    elif centered is None:
+        print("Kontrola po centrovani preskocena: centrovani nevratilo cilovy bod.")
+    else:
+        print("Kontrola po centrovani preskocena: byl pozadovan stop.")
                         
     turtle.cmd_velocity(linear=0.0)
     turtle.cmd_velocity(angular=0.0)
-    print("Dojeto do cile!")
+    if should_stop(stop_requested):
+        print("Sekvence jizdy ukoncena kvuli stop pozadavku.")
+    else:
+        print("Sekvence jizdy dokoncena.")

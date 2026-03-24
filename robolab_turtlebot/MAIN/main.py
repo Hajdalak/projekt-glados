@@ -35,7 +35,7 @@ def main():
 
     ball_center = detection.find_ball(turtle, stop_requested=is_stop_requested)
     if ball_center is None:
-        print("Byl aktivovan killSwitch, koncim.")
+        print("Byl aktivovan killswitch, koncim.")
         return
 
     centered = movement.recenter_to_ball(turtle)

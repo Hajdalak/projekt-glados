@@ -27,7 +27,7 @@ DEFAULT_AXIS_RATIO_MIN = 0.75
 def odometry(turtle):
     """Print current odometry snapshot."""
     turtle.wait_for_odometry()
-    print('Odometry: {}'.format(turtle.get_odometry()))
+    print('Odometrie: {}'.format(turtle.get_odometry()))
 
 
 def rgbImage(turtle):
@@ -35,8 +35,8 @@ def rgbImage(turtle):
     turtle = Turtlebot(rgb=True)
     turtle.wait_for_rgb_image()
     rgb = turtle.get_rgb_image()
-    print('RGB shape: {}'.format(rgb.shape))
-    print('RGB at 20,20: {}'.format(rgb[20, 20, :]))
+    print('Rozmer RGB obrazu: {}'.format(rgb.shape))
+    print('RGB hodnota v bode [20,20]: {}'.format(rgb[20, 20, :]))
 
 
 def depthImage(turtle):
@@ -44,8 +44,8 @@ def depthImage(turtle):
     turtle = Turtlebot(depth=True)
     turtle.wait_for_depth_image()
     depth = turtle.get_depth_image()
-    print('Depth shape: {}'.format(depth.shape))
-    print('Depth at 20,20: {}'.format(depth[20, 20]))
+    print('Rozmer depth obrazu: {}'.format(depth.shape))
+    print('Depth hodnota v bode [20,20]: {}'.format(depth[20, 20]))
 
 
 def pointCloud(turtle):
@@ -53,15 +53,21 @@ def pointCloud(turtle):
     turtle = Turtlebot(pc=True)
     turtle.wait_for_point_cloud()
     pc = turtle.get_point_cloud()
-    print('PointCloud shape: {}'.format(pc.shape))
-    print('Point at 20,20: {}'.format(pc[20, 20, :]))
+    print('Rozmer point cloudu: {}'.format(pc.shape))
+    print('Bod v [20,20]: {}'.format(pc[20, 20, :]))
 
 
 def get_hsv(turtle):
     """Return an HSV image from the Turtlebot RGB camera."""
-    turtle.wait_for_rgb_image()  # Wait for the first frame.
-    rgb_image = turtle.get_rgb_image()
+    try:
+        turtle.wait_for_rgb_image()  # Wait for the first frame.
+        rgb_image = turtle.get_rgb_image()
+    except Exception as exc:
+        print("Ziskani RGB snimku selhalo v get_hsv: {}".format(exc))
+        return None
+
     if rgb_image is None:
+        print("RGB snimek je None v get_hsv.")
         return None
     return cv2.cvtColor(rgb_image, cv2.COLOR_BGR2HSV)
 
@@ -122,9 +128,15 @@ def detect_objects_with_debug_frame(
     axis_tolerance=DEFAULT_AXIS_RATIO_MIN,
 ):
     """Return centroids, annotated RGB frame and binary mask for debugging."""
-    turtle.wait_for_rgb_image()
-    rgb_image = turtle.get_rgb_image()
+    try:
+        turtle.wait_for_rgb_image()
+        rgb_image = turtle.get_rgb_image()
+    except Exception as exc:
+        print("Ziskani RGB snimku selhalo v debug detekci: {}".format(exc))
+        return [], None, None
+
     if rgb_image is None:
+        print("RGB snimek je None v debug detekci.")
         return [], None, None
 
     hsv = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2HSV)
@@ -168,7 +180,7 @@ def show_detection_stream(
     axis_tolerance=DEFAULT_AXIS_RATIO_MIN,
 ):
     """Open live windows with robot RGB view and detected objects. Press q to quit."""
-    print("Opening detection preview. Press 'q' in image window to quit.")
+    print("Oteviram nahled detekce. Pro ukonceni stiskni 'q' v okne obrazu.")
 
     rate = Rate(15)
     while True:
@@ -196,14 +208,19 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
     """
     Return averaged 3D coordinates (X, Y, Z) around a centroid in the point cloud.
     """
-    print("jsem ve vision.get_average_3d_point.")
+    print("Jsem ve vision.get_average_3d_point.")
 
-    turtle.wait_for_point_cloud()
-    pc = turtle.get_point_cloud()
+    try:
+        turtle.wait_for_point_cloud()
+        pc = turtle.get_point_cloud()
+    except Exception as exc:
+        print("Ziskani point cloudu selhalo: {}".format(exc))
+        return None
 
     print("Proběhly funkce get point cloud.")
 
     if pc is None:
+        print("Point cloud snimek je None.")
         return None
 
     # Convert centroid to integer indices for array indexing.
@@ -230,13 +247,13 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
 
     # Guard against windows that contain only NaN values.
     if np.all(np.isnan(valid_points)):
-        print("Vidim Nan.")
+        print("Vsechny hodnoty v okne jsou NaN.")
         return None
 
     avg_point = np.nanmean(valid_points, axis=0)
 
     print(
-        "3D bod míčku: X={:.2f}, Y={:.2f}, Z={:.2f} m".format(
+        "3D bod micku: X={:.2f}, Y={:.2f}, Z={:.2f} m".format(
             float(avg_point[0]),
             float(avg_point[1]),
             float(avg_point[2]),
