@@ -1,7 +1,13 @@
 from __future__ import print_function
-from robolab_turtlebot import Turtlebot, Rate, get_time
+
+# Role of this module:
+# - Provide camera, depth, and point-cloud utility functions.
+# - Detect HSV-based objects and produce debug frames.
+# - Sample averaged 3D points around image coordinates.
+
 import cv2
 import numpy as np
+from robolab_turtlebot import Rate, Turtlebot
 
 turtle = Turtlebot(rgb=True)
 
@@ -17,30 +23,39 @@ DEFAULT_MIN_AREA = 200
 DEFAULT_MAX_AREA = 8000
 DEFAULT_AXIS_RATIO_MIN = 0.75
 
+
 def odometry(turtle):
+    """Print current odometry snapshot."""
     turtle.wait_for_odometry()
     print('Odometry: {}'.format(turtle.get_odometry()))
 
+
 def rgbImage(turtle):
+    """Print basic RGB camera diagnostics."""
     turtle = Turtlebot(rgb=True)
     turtle.wait_for_rgb_image()
     rgb = turtle.get_rgb_image()
     print('RGB shape: {}'.format(rgb.shape))
     print('RGB at 20,20: {}'.format(rgb[20, 20, :]))
 
+
 def depthImage(turtle):
+    """Print basic depth camera diagnostics."""
     turtle = Turtlebot(depth=True)
     turtle.wait_for_depth_image()
     depth = turtle.get_depth_image()
     print('Depth shape: {}'.format(depth.shape))
     print('Depth at 20,20: {}'.format(depth[20, 20]))
 
+
 def pointCloud(turtle):
+    """Print basic point-cloud diagnostics."""
     turtle = Turtlebot(pc=True)
     turtle.wait_for_point_cloud()
     pc = turtle.get_point_cloud()
     print('PointCloud shape: {}'.format(pc.shape))
     print('Point at 20,20: {}'.format(pc[20, 20, :]))
+
 
 def get_hsv(turtle):
     """Return an HSV image from the Turtlebot RGB camera."""
@@ -49,6 +64,7 @@ def get_hsv(turtle):
     if rgb_image is None:
         return None
     return cv2.cvtColor(rgb_image, cv2.COLOR_BGR2HSV)
+
 
 def create_hsv_mask(
     hsv_image,
@@ -178,11 +194,10 @@ def show_detection_stream(
 
 def get_average_3d_point(turtle, cx, cy, window_size=5):
     """
-    Ziska prumernou 3D souradnici (X, Y, Z) z okoli zadaneho centroidu v Point Cloudu.
+    Return averaged 3D coordinates (X, Y, Z) around a centroid in the point cloud.
     """
     print("jsem ve vision.get_average_3d_point.")
 
-    
     turtle.wait_for_point_cloud()
     pc = turtle.get_point_cloud()
 
@@ -190,34 +205,34 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
 
     if pc is None:
         return None
-        
-    # Prevod centroidu na cele cislo pro indexovani pole
-    # Numpy pole maji indexovani [radek, sloupec], pricemz radek = cy, sloupec = cx
+
+    # Convert centroid to integer indices for array indexing.
+    # NumPy uses [row, col], where row = cy and col = cx.
     col = int(round(cx))
     row = int(round(cy))
-    
-    # Rozmery point cloudu (obvykle shodne s RGB obrazem)
+
+    # Point-cloud dimensions (typically the same as the RGB frame).
     h, w, _ = pc.shape
-    
-    # Vypocet hranic okna (s osetrenim okraju obrazku, abychom neindexovali mimo pole)
+
+    # Compute window bounds and clamp to image limits.
     half_w = window_size // 2
     row_start = max(0, row - half_w)
     row_end = min(h, row + half_w + 1)
     col_start = max(0, col - half_w)
     col_end = min(w, col + half_w + 1)
-    
-    # Vyrez (Region of Interest) z point cloudu kolem centroidu
+
+    # Extract ROI from the point cloud around the centroid.
     window_pc = pc[row_start:row_end, col_start:col_end, :]
-    
-    # Prevedeme vyrez na 2D pole bodu (N, 3) a spocitame prumer pres sloupce (X, Y, Z)
-    # np.nanmean automaticky preskoci NaN hodnoty
+
+    # Reshape ROI to (N, 3) and compute mean over columns (X, Y, Z).
+    # np.nanmean automatically ignores NaN values.
     valid_points = window_pc.reshape(-1, 3)
-    
-    # Kontrola, zda okno neobsahuje pouze NaN hodnoty
+
+    # Guard against windows that contain only NaN values.
     if np.all(np.isnan(valid_points)):
         print("Vidim Nan.")
         return None
-        
+
     avg_point = np.nanmean(valid_points, axis=0)
 
     print(
@@ -231,7 +246,6 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
 
 
 def main():
-
     show_detection_stream(turtle)
 
 
