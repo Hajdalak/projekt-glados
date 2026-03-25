@@ -33,9 +33,12 @@ def main():
 
     turtle.register_bumper_event_cb(bumper_callback)
 
-    gate_center = movement.recenter_between_two_objects(turtle)
+    gate_center = movement.recenter_between_two_objects(turtle, stop_requested=is_stop_requested)
+    if gate_center is None:
+        print("Pocatecni centrovani selhalo: brána neni videt. Konec.")
+        return
 
-    movement.approach_and_center(turtle, 0.3, 0.3, "gate", stop_requested=is_stop_requested)
+    movement.drive_to_ball(turtle, [], target_distance=0.3, target_type='gate', stop_requested=is_stop_requested)
 
 if __name__ == '__main__':
     main()
