@@ -13,7 +13,7 @@ import time
 
 killSwitch = 0
 turtle = Turtlebot(rgb=True, pc=True)
-
+buttonPressed = False
 
 def is_stop_requested():
     """Return True when the global safety stop (killSwitch) is active."""
@@ -56,7 +56,7 @@ def gateJed():
 
     movement.drive_to_ball(turtle, [], target_distance=0.3, target_type='gate', stop_requested=is_stop_requested)
 
-buttonPressed = False
+
 def register_button_event_cb(fun):
     global buttonPressed
     if fun.state == 1:
@@ -65,7 +65,7 @@ def register_button_event_cb(fun):
 def main():
     """Robot entrypoint: safety setup, ball find, center and approach."""
     while(not buttonPressed):
-        Rate.sleep(10)
+        Rate.sleep()
     
     tondaVS()
     drive_around.drive_around(turtle)
