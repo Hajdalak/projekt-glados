@@ -1,12 +1,11 @@
 from __future__ import print_function
+from robolab_turtlebot import Turtlebot, Rate, get_time
+import vision
 
 # Role of this module:
 # - Implement movement primitives and centering routines.
 # - Handle distance-based approach behavior.
 # - Respect emergency stop signals during motion.
-
-from robolab_turtlebot import Turtlebot, Rate, get_time
-import vision
 
 
 killSwitch = 0
@@ -138,7 +137,7 @@ def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop
             turtle.cmd_velocity(linear=0.0, angular=0.0)
             
             if target_type == 'ball':
-                recenter_to_ball(turtle)
+                recenter_between_two_objects(turtle, stop_requested=stop_requested)
             else:
                 recenter_between_two_objects(turtle, stop_requested=stop_requested)
     else:
@@ -227,7 +226,7 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
 
     # End of function: re-center and, if still far, finish the approach.
     if target_type == 'ball':
-        centered = recenter_to_ball(turtle)
+        centered = recenter_between_two_objects(turtle, stop_requested=stop_requested)
     else:
         centered = recenter_between_two_objects(turtle, stop_requested=stop_requested)
         
