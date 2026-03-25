@@ -66,7 +66,7 @@ def main():
     """Robot entrypoint: safety setup, ball find, center and approach."""
     turtle.register_button_event_cb(registerCallback)
     while(not buttonPressed):
-        Rate.sleep()
+        Rate.sleep(10)
     
     tondaVS()
     drive_around.drive_around(turtle)
