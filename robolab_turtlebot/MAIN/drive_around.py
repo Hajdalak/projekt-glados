@@ -144,6 +144,10 @@ def drive_around(turtle):
 
     # KROK A: vynulování odometrie před manévrem
     turtle.reset_odometry()
+    wait_rate = Rate(10)
+    
+    while turtle.get.odometry() != [0,0,0]:
+        wait_rate.sleep()
 
     # KROK B: registrace bumper callbacku kvůli bezpečnosti
     turtle.register_bumper_event_cb(bumper_callback)
