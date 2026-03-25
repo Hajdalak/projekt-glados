@@ -62,10 +62,9 @@ def maneuver_start_face_ball(turtle,
       2) repeat 6x: drive side_m, rotate 60° LEFT
     """
     rate = Rate(10)
-    turtle.reset_odometry()
     
     # 1) 60° doprava (ENTRY)  -> ZÁPORNĚ
-    rotate_by(turtle, rate, delta_rad=-math.radians(60), w=w)
+    rotate_by(turtle, rate, delta_rad=+math.radians(60), w=w)
     if killSwitch != 0:
         stop(turtle); return
 
@@ -74,13 +73,13 @@ def maneuver_start_face_ball(turtle,
         if killSwitch != 0: break
         drive_straight(turtle, rate, dist_m=side_m, v=v)
         if killSwitch != 0: break
-        rotate_by(turtle, rate, delta_rad=+math.radians(60), w=w)
+        rotate_by(turtle, rate, delta_rad=-math.radians(60), w=w)
 
     if killSwitch != 0:
         stop(turtle); return
 
     # 3) 90° doprava na konci -> ZÁPORNĚ
-    rotate_by(turtle, rate, delta_rad=-math.radians(90), w=w)
+    rotate_by(turtle, rate, delta_rad=+math.radians(90), w=w)
     stop(turtle)
 
 def drive_around(turtle):
