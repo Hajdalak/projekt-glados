@@ -64,30 +64,23 @@ def maneuver_start_face_ball(turtle,
     rate = Rate(10)
     turtle.reset_odometry()
     
-    # 1) 60° doprava (entry)
-    rotate_by(turtle, rate, delta_rad=math.radians(60), w=w)
+    # 1) 60° doprava (ENTRY)  -> ZÁPORNĚ
+    rotate_by(turtle, rate, delta_rad=-math.radians(60), w=w)
     if killSwitch != 0:
-        stop(turtle)
-        return
+        stop(turtle); return
 
-    # 2) hexagon: 6x (rovně + 60° doleva)
-    for i in range(5):
-        if killSwitch != 0:
-            break
+    # 2) cyklus: rovně + 60° doleva -> KLADNĚ
+    for i in range(6):                       # pokud chceš celý hexagon, dej 6
+        if killSwitch != 0: break
         drive_straight(turtle, rate, dist_m=side_m, v=v)
-        if killSwitch != 0:
-            break
+        if killSwitch != 0: break
         rotate_by(turtle, rate, delta_rad=+math.radians(60), w=w)
 
     if killSwitch != 0:
-        stop(turtle)
-        return
+        stop(turtle); return
 
-    drive_straight(turtle, rate, dist_m=side_m/2, v=v)
-    if killSwitch != 0:
-        stop(turtle)
-        return
-    rotate_by(turtle, rate, delta_rad=math.radians(-90), w=w)
+    # 3) 90° doprava na konci -> ZÁPORNĚ
+    rotate_by(turtle, rate, delta_rad=-math.radians(90), w=w)
     stop(turtle)
 
 def drive_around(turtle):
