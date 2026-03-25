@@ -62,7 +62,6 @@ def maneuver_start_face_ball(turtle,
       2) repeat 6x: drive side_m, rotate 60° LEFT
     """
     rate = Rate(10)
-    turtle.reset_odometry()
     
     # 1) 60° doprava (ENTRY)  -> ZÁPORNĚ
     rotate_by(turtle, rate, delta_rad=-math.radians(60), w=w)
