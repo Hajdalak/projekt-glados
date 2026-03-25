@@ -137,7 +137,7 @@ def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop
             turtle.cmd_velocity(linear=0.0, angular=0.0)
             
             if target_type == 'ball':
-                recenter_between_two_objects(turtle, stop_requested=stop_requested)
+                recenter_to_ball(turtle)
             else:
                 recenter_between_two_objects(turtle, stop_requested=stop_requested)
     else:
@@ -226,7 +226,7 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
 
     # End of function: re-center and, if still far, finish the approach.
     if target_type == 'ball':
-        centered = recenter_between_two_objects(turtle, stop_requested=stop_requested)
+        centered = recenter_to_ball(turtle)
     else:
         centered = recenter_between_two_objects(turtle, stop_requested=stop_requested)
         
