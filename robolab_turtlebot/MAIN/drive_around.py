@@ -106,7 +106,7 @@ def maneuver_start_face_ball(turtle,
     # Pokud se chyba objeví až tady, problém je spíš v cyklu
     # než v úvodním natočení.
     # =========================================================
-    for i in range(6):
+    for i in range(5):
         # KROK 2.1: kontrola killswitche před jízdou
         if killSwitch != 0:
             break
