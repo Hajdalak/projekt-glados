@@ -173,6 +173,31 @@ def detect_objects_with_debug_frame(
     return object_centroids, annotated, mask
 
 
+def show_rgb_stream(turtle):
+    """Open live window with robot RGB camera feed. Press q to quit."""
+    print("Oteviram zive video z robota. Pro ukonceni stiskni 'q'.")
+
+    rate = Rate(15)
+    while True:
+        try:
+            turtle.wait_for_rgb_image()
+            rgb = turtle.get_rgb_image()
+        except Exception as exc:
+            print("Ziskani RGB obrazu selhalo: {}".format(exc))
+            break
+
+        if rgb is not None:
+            cv2.imshow('Robot RGB camera', rgb)
+
+        key = cv2.waitKey(1) & 0xFF
+        if key == ord('q'):
+            break
+
+        rate.sleep()
+
+    cv2.destroyAllWindows()
+
+
 def show_detection_stream(
     turtle,
     max_area=DEFAULT_MAX_AREA,
@@ -263,7 +288,7 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
 
 
 def main():
-    show_detection_stream(turtle)
+    show_rgb_stream(turtle)
 
 
 if __name__ == '__main__':

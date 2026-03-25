@@ -1,14 +1,14 @@
-from __future__ import print_function
-
 # Role of this module:
 # - Wire high-level robot behavior.
 # - Register safety callbacks.
 # - Coordinate detection and movement modules.
 
+from __future__ import print_function
 from robolab_turtlebot import Turtlebot
 
 import detection
 import movement
+import drive_around
 
 killSwitch = 0
 turtle = Turtlebot(rgb=True, pc=True)
@@ -47,6 +47,8 @@ def main():
     objects = [(cx, cy)]
 
     movement.drive_to_ball(turtle, objects, 0.3, stop_requested=is_stop_requested)
+
+    drive_around.drive_around(turtle)
 
 
 if __name__ == '__main__':
