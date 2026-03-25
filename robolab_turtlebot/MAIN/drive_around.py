@@ -26,32 +26,28 @@ def bumper_callback(msg):
     print('bumper {}'.format(killSwitch))
 
 
-def rotate_by(turtle, rate, delta_rad, w=0.6, tol=0.06):
-    # KROK: načtení aktuální orientace robota
+def rotate_by(turtle, rate, delta_rad, w=0.25, tol=0.08):
     _, _, a0 = turtle.get_odometry()
-
-    # KROK: výpočet cílového úhlu
     target = wrap_pi(a0 + delta_rad)
 
-    # KROK: otáčení, dokud nejsme dost blízko cílovému úhlu
     while not turtle.is_shutting_down() and killSwitch == 0:
         _, _, a = turtle.get_odometry()
         err = wrap_pi(target - a)
 
-        # KROK: pokud jsme už dost blízko, skončíme
         if abs(err) < tol:
             break
 
-        # KROK: P-regulace úhlové rychlosti s omezením na max. rychlost
-        ang = max(-abs(w), min(abs(w), 1.5 * err))
+        ang = 0.8 * err
 
-        # KROK: poslat robotovi příkaz pouze na rotaci
+        if ang > w:
+            ang = w
+        elif ang < -w:
+            ang = -w
+
         turtle.cmd_velocity(0.0, ang)
         rate.sleep()
 
-    # KROK: po dokončení rotace zastavit
     stop(turtle)
-
 
 def drive_straight(turtle, rate, dist_m, v=0.18, tol=0.03):
     # KROK: uložit si startovní pozici
@@ -95,7 +91,7 @@ def maneuver_start_face_ball(turtle,
     # Robot se na začátku otočí o 60 stupňů.
     # Tady hned poznáš, jestli je správně znaménko rotace.
     # =========================================================
-    rotate_by(turtle, rate, delta_rad=math.radians(-60), w=w)
+    rotate_by(turtle, rate, delta_rad=math.radians(+60), w=w)
 
     # KROK 1a: pokud byl aktivován bumper / killswitch, skončíme
     if killSwitch != 0:
