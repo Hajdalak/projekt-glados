@@ -9,7 +9,6 @@ from robolab_turtlebot import Turtlebot, Rate
 import detection
 import movement
 import drive_around
-import time
 
 killSwitch = 0
 turtle = Turtlebot(rgb=True, pc=True)
