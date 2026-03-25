@@ -23,7 +23,7 @@ def bumper_callback(msg):
         turtle_ref.cmd_velocity(0.0, 0.0)
     print('bumper {}'.format(killSwitch))
 
-def rotate_by(turtle, rate, delta_rad, w=0.8, tol=0.06):
+def rotate_by(turtle, rate, delta_rad, w=0.6, tol=0.06):
 
     _, _, a0 = turtle.get_odometry()
     target = wrap_pi(a0 + delta_rad)
@@ -51,7 +51,7 @@ def drive_straight(turtle, rate, dist_m, v=0.18, tol=0.03):
 def maneuver_start_face_ball(turtle,
                              side_m=0.30,     # délka strany hexagonu (ladíš)
                              v=0.18,
-                             w=0.8):
+                             w=0.6):
     """
     Start:
       - robot ~30 cm od míčku
@@ -65,7 +65,7 @@ def maneuver_start_face_ball(turtle,
     turtle.reset_odometry()
     
     # 1) 60° doprava (entry)
-    rotate_by(turtle, rate, delta_rad=math.radians(-60), w=w)
+    rotate_by(turtle, rate, delta_rad=math.radians(60), w=w)
     if killSwitch != 0:
         stop(turtle)
         return
@@ -97,4 +97,4 @@ def drive_around(turtle):
     turtle.register_bumper_event_cb(bumper_callback)
 
     # Robota postav 30 cm před míček čelem k míčku, pak spusť:
-    maneuver_start_face_ball(turtle, side_m=0.40, v=0.18, w=0.8)
+    maneuver_start_face_ball(turtle, side_m=0.40, v=0.18, w=0.6)
