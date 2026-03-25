@@ -132,6 +132,7 @@ def maneuver_start_face_ball(turtle,
     # Pokud vše předtím funguje a problém je až tady,
     # je chyba v tomto posledním otočení.
     # =========================================================
+    drive_straight(turtle, rate, dist_m=side_m/2, v=v)
     rotate_by(turtle, rate, delta_rad=-math.radians(90), w=w)
 
     # KROK 4: finální zastavení
