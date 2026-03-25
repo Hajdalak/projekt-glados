@@ -95,7 +95,7 @@ def maneuver_start_face_ball(turtle,
     # Robot se na začátku otočí o 60 stupňů.
     # Tady hned poznáš, jestli je správně znaménko rotace.
     # =========================================================
-    rotate_by(turtle, rate, delta_rad=+math.radians(60), w=w)
+    rotate_by(turtle, rate, delta_rad=math.radians(-60), w=w)
 
     # KROK 1a: pokud byl aktivován bumper / killswitch, skončíme
     if killSwitch != 0:
@@ -123,7 +123,7 @@ def maneuver_start_face_ball(turtle,
             break
 
         # KROK 2.4: otočení o 60 stupňů pro další stranu
-        rotate_by(turtle, rate, delta_rad=-math.radians(60), w=w)
+        rotate_by(turtle, rate, delta_rad=+math.radians(60), w=w)
 
     # KROK 2a: pokud byl aktivován bumper / killswitch, skončíme
     if killSwitch != 0:
@@ -136,7 +136,7 @@ def maneuver_start_face_ball(turtle,
     # Pokud vše předtím funguje a problém je až tady,
     # je chyba v tomto posledním otočení.
     # =========================================================
-    rotate_by(turtle, rate, delta_rad=+math.radians(90), w=w)
+    rotate_by(turtle, rate, delta_rad=-math.radians(90), w=w)
 
     # KROK 4: finální zastavení
     stop(turtle)
