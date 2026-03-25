@@ -146,7 +146,7 @@ def drive_around(turtle):
     turtle.reset_odometry()
     wait_rate = Rate(10)
     
-    while turtle.get.odometry() != [0,0,0]:
+    while turtle.get_odometry() != [0,0,0]:
         wait_rate.sleep()
 
     # KROK B: registrace bumper callbacku kvůli bezpečnosti
