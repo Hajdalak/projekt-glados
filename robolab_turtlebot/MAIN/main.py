@@ -71,7 +71,7 @@ def main():
     """Robot entrypoint: safety setup, ball find, center and approach."""
     #cekejNaTlacirko()
     
-    start_drive()
+    #start_drive()
     drive_around.drive_around(turtle)
     gateJed()
    
