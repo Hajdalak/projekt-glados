@@ -4,11 +4,12 @@
 # - Coordinate detection and movement modules.
 
 from __future__ import print_function
-from robolab_turtlebot import Turtlebot
+from robolab_turtlebot import Turtlebot, Rate
 
 import detection
 import movement
 import drive_around
+import time
 
 killSwitch = 0
 turtle = Turtlebot(rgb=True, pc=True)
@@ -27,10 +28,7 @@ def bumper_callback(msg):
     turtle.cmd_velocity(linear=0, angular=0)
     print('bumper {}. Do neceho jsem narazil.'.format(killSwitch))
 
-
-def main():
-    """Robot entrypoint: safety setup, ball find, center and approach."""
-
+def tondaVS():
     turtle.register_bumper_event_cb(bumper_callback)
 
     ball_center = detection.find_ball(turtle, stop_requested=is_stop_requested)
@@ -50,6 +48,29 @@ def main():
 
     drive_around.drive_around(turtle)
 
+def gateJed():
+    gate_center = movement.recenter_between_two_objects(turtle, stop_requested=is_stop_requested)
+    if gate_center is None:
+        print("Pocatecni centrovani selhalo: brána neni videt. Konec.")
+        return
+
+    movement.drive_to_ball(turtle, [], target_distance=0.3, target_type='gate', stop_requested=is_stop_requested)
+
+buttonPressed = False
+def register_button_event_cb(fun):
+    global buttonPressed
+    if fun.state == 1:
+        buttonPressed = True
+
+def main():
+    """Robot entrypoint: safety setup, ball find, center and approach."""
+    while(not buttonPressed):
+        Rate.sleep()
+    
+    tondaVS()
+    drive_around.drive_around(turtle)
+    gateJed()
+   
 
 if __name__ == '__main__':
     main()
