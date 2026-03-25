@@ -65,7 +65,7 @@ def register_button_event_cb(fun):
 def main():
     """Robot entrypoint: safety setup, ball find, center and approach."""
     while(not buttonPressed):
-        Rate.sleep()
+        Rate.sleep(10)
     
     tondaVS()
     drive_around.drive_around(turtle)
