@@ -257,3 +257,39 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
         print("Sekvence jizdy ukoncena kvuli stop pozadavku.")
     else:
         print("Sekvence jizdy dokoncena.")
+
+def recenter_to_ball(turtle, image_width=640, tolerance=20, kp=0.005):
+    """Center robot on visible ball and return (cx, cy), or None if ball is lost."""
+    objects = vision.detect_objects_by_hsv_and_area(turtle)
+    if len(objects) == 0:
+        print("Micek behem jizdy zmizel z obrazu.")
+        return None
+
+    cx, cy = float(objects[0][0]), float(objects[0][1])
+
+    rate = Rate(10)
+    while killSwitch == 0:
+        center_x = image_width / 2.0
+        error = center_x - cx
+
+        if abs(error) <= tolerance:
+            break
+
+        angular_vel = abs(error) * kp
+        max_vel = 0.5
+        if angular_vel > max_vel:
+            angular_vel = max_vel
+        direction = 1 if error > 0 else -1
+        turtle.cmd_velocity(angular=direction * angular_vel)
+
+        objects = vision.detect_objects_by_hsv_and_area(turtle)
+        if len(objects) == 0:
+            print("Micek behem centrovani zmizel z obrazu.")
+            turtle.cmd_velocity(angular=0.0)
+            return None
+        cx, cy = float(objects[0][0]), float(objects[0][1])
+        rate.sleep()
+
+    turtle.cmd_velocity(angular=0.0)
+    return cx, cy
+
