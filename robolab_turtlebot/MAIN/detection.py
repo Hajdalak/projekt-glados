@@ -21,8 +21,9 @@ def count_objects(turtle):
 
 
 def show_detected_objects(turtle):
-    """Open live preview with object detections."""
-    vision.show_detection_stream(turtle)
+    """Print one-step detection result for quick debugging."""
+    objects = vision.detect_objects_by_hsv_and_area(turtle)
+    print("Detected objects: {}.".format(len(objects)))
 
 
 def find_ball(turtle, stop_requested=None, search_angular_speed=0.3):

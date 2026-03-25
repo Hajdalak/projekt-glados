@@ -1,15 +1,12 @@
 from __future__ import print_function
 
 # Role of this module:
-# - Provide camera, depth, and point-cloud utility functions.
-# - Detect HSV-based objects and produce debug frames.
+# - Provide vision utilities used by main behavior modules.
+# - Detect HSV-based objects.
 # - Sample averaged 3D points around image coordinates.
 
 import cv2
 import numpy as np
-from robolab_turtlebot import Rate, Turtlebot
-
-turtle = Turtlebot(rgb=True)
 
 # Tuned for the green ball in current lab lighting.
 BALL_MIN_H = 37
@@ -24,50 +21,17 @@ DEFAULT_MAX_AREA = 8000
 DEFAULT_AXIS_RATIO_MIN = 0.75
 
 
-def odometry(turtle):
-    """Print current odometry snapshot."""
-    turtle.wait_for_odometry()
-    print('Odometrie: {}'.format(turtle.get_odometry()))
-
-
-def rgbImage(turtle):
-    """Print basic RGB camera diagnostics."""
-    turtle = Turtlebot(rgb=True)
-    turtle.wait_for_rgb_image()
-    rgb = turtle.get_rgb_image()
-    print('Rozmer RGB obrazu: {}'.format(rgb.shape))
-    print('RGB hodnota v bode [20,20]: {}'.format(rgb[20, 20, :]))
-
-
-def depthImage(turtle):
-    """Print basic depth camera diagnostics."""
-    turtle = Turtlebot(depth=True)
-    turtle.wait_for_depth_image()
-    depth = turtle.get_depth_image()
-    print('Rozmer depth obrazu: {}'.format(depth.shape))
-    print('Depth hodnota v bode [20,20]: {}'.format(depth[20, 20]))
-
-
-def pointCloud(turtle):
-    """Print basic point-cloud diagnostics."""
-    turtle = Turtlebot(pc=True)
-    turtle.wait_for_point_cloud()
-    pc = turtle.get_point_cloud()
-    print('Rozmer point cloudu: {}'.format(pc.shape))
-    print('Bod v [20,20]: {}'.format(pc[20, 20, :]))
-
-
 def get_hsv(turtle):
     """Return an HSV image from the Turtlebot RGB camera."""
     try:
         turtle.wait_for_rgb_image()  # Wait for the first frame.
         rgb_image = turtle.get_rgb_image()
     except Exception as exc:
-        print("Ziskani RGB snimku selhalo v get_hsv: {}".format(exc))
+        print("Failed to read RGB frame in get_hsv: {}".format(exc))
         return None
 
     if rgb_image is None:
-        print("RGB snimek je None v get_hsv.")
+        print("RGB frame is None in get_hsv.")
         return None
     return cv2.cvtColor(rgb_image, cv2.COLOR_BGR2HSV)
 
@@ -127,16 +91,16 @@ def detect_objects_with_debug_frame(
     min_area=DEFAULT_MIN_AREA,
     axis_tolerance=DEFAULT_AXIS_RATIO_MIN,
 ):
-    """Return centroids, annotated RGB frame and binary mask for debugging."""
+    """Return centroids, annotated RGB frame, and binary mask for debugging."""
     try:
         turtle.wait_for_rgb_image()
         rgb_image = turtle.get_rgb_image()
     except Exception as exc:
-        print("Ziskani RGB snimku selhalo v debug detekci: {}".format(exc))
+        print("Failed to read RGB frame in debug detection: {}".format(exc))
         return [], None, None
 
     if rgb_image is None:
-        print("RGB snimek je None v debug detekci.")
+        print("RGB frame is None in debug detection.")
         return [], None, None
 
     hsv = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2HSV)
@@ -172,80 +136,23 @@ def detect_objects_with_debug_frame(
 
     return object_centroids, annotated, mask
 
-
-def show_rgb_stream(turtle):
-    """Open live window with robot RGB camera feed. Press q to quit."""
-    print("Oteviram zive video z robota. Pro ukonceni stiskni 'q'.")
-
-    rate = Rate(15)
-    while True:
-        try:
-            turtle.wait_for_rgb_image()
-            rgb = turtle.get_rgb_image()
-        except Exception as exc:
-            print("Ziskani RGB obrazu selhalo: {}".format(exc))
-            break
-
-        if rgb is not None:
-            cv2.imshow('Robot RGB camera', rgb)
-
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord('q'):
-            break
-
-        rate.sleep()
-
-    cv2.destroyAllWindows()
-
-
-def show_detection_stream(
-    turtle,
-    max_area=DEFAULT_MAX_AREA,
-    min_area=DEFAULT_MIN_AREA,
-    axis_tolerance=DEFAULT_AXIS_RATIO_MIN,
-):
-    """Open live windows with robot RGB view and detected objects. Press q to quit."""
-    print("Oteviram nahled detekce. Pro ukonceni stiskni 'q' v okne obrazu.")
-
-    rate = Rate(15)
-    while True:
-        object_centroids, annotated, mask = detect_objects_with_debug_frame(
-            turtle,
-            max_area=max_area,
-            min_area=min_area,
-            axis_tolerance=axis_tolerance,
-        )
-
-        if annotated is not None:
-            cv2.imshow('Robot view - detected objects', annotated)
-        if mask is not None:
-            cv2.imshow('HSV mask', mask)
-
-        key = cv2.waitKey(1) & 0xFF
-        if key == ord('q'):
-            break
-
-        rate.sleep()
-
-    cv2.destroyAllWindows()
-
 def get_average_3d_point(turtle, cx, cy, window_size=5):
     """
     Return averaged 3D coordinates (X, Y, Z) around a centroid in the point cloud.
     """
-    print("Jsem ve vision.get_average_3d_point.")
+    print("vision.get_average_3d_point started.")
 
     try:
         turtle.wait_for_point_cloud()
         pc = turtle.get_point_cloud()
     except Exception as exc:
-        print("Ziskani point cloudu selhalo: {}".format(exc))
+        print("Failed to read point cloud: {}".format(exc))
         return None
 
-    print("Proběhly funkce get point cloud.")
+    print("Point cloud frame received.")
 
     if pc is None:
-        print("Point cloud snimek je None.")
+        print("Point cloud frame is None.")
         return None
 
     # Convert centroid to integer indices for array indexing.
@@ -272,24 +179,16 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
 
     # Guard against windows that contain only NaN values.
     if np.all(np.isnan(valid_points)):
-        print("Vsechny hodnoty v okne jsou NaN.")
+        print("All values in the selected window are NaN.")
         return None
 
     avg_point = np.nanmean(valid_points, axis=0)
 
     print(
-        "3D bod micku: X={:.2f}, Y={:.2f}, Z={:.2f} m".format(
+        "Ball 3D point: X={:.2f}, Y={:.2f}, Z={:.2f} m".format(
             float(avg_point[0]),
             float(avg_point[1]),
             float(avg_point[2]),
         )
     )
     return avg_point
-
-
-def main():
-    show_rgb_stream(turtle)
-
-
-if __name__ == '__main__':
-    main()
