@@ -28,7 +28,7 @@ def bumper_callback(msg):
     turtle.cmd_velocity(linear=0, angular=0)
     print('bumper {}. Do neceho jsem narazil.'.format(killSwitch))
 
-def tondaVS():
+def start_drive():
     turtle.register_bumper_event_cb(bumper_callback)
 
     ball_center = detection.find_ball(turtle, stop_requested=is_stop_requested)
@@ -71,7 +71,7 @@ def main():
     """Robot entrypoint: safety setup, ball find, center and approach."""
     #cekejNaTlacirko()
     
-    tondaVS()
+    start_drive()
     drive_around.drive_around(turtle)
     gateJed()
    
