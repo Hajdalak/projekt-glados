@@ -57,13 +57,14 @@ def gateJed():
     movement.drive_to_ball(turtle, [], target_distance=0.3, target_type='gate', stop_requested=is_stop_requested)
 
 buttonPressed = False
-def register_button_event_cb(fun):
+def registerCallback(fun):
     global buttonPressed
     if fun.state == 1:
         buttonPressed = True
 
 def main():
     """Robot entrypoint: safety setup, ball find, center and approach."""
+    turtle.register_button_event_cb(registerCallback)
     while(not buttonPressed):
         Rate.sleep()
     
