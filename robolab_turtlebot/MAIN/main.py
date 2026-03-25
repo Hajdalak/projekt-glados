@@ -46,7 +46,6 @@ def tondaVS():
 
     movement.drive_to_ball(turtle, objects, 0.3, stop_requested=is_stop_requested)
 
-    drive_around.drive_around(turtle)
 
 def gateJed():
     gate_center = movement.recenter_between_two_objects(turtle, stop_requested=is_stop_requested)
@@ -62,12 +61,15 @@ def registerCallback(fun):
     if fun.state == 1:
         buttonPressed = True
 
-def main():
-    """Robot entrypoint: safety setup, ball find, center and approach."""
+def cekejNaTlacirko():
     turtle.register_button_event_cb(registerCallback)
     wait_rate = Rate(10)
     while(not buttonPressed):
         wait_rate.sleep()
+
+def main():
+    """Robot entrypoint: safety setup, ball find, center and approach."""
+    #cekejNaTlacirko()
     
     tondaVS()
     drive_around.drive_around(turtle)
