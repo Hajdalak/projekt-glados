@@ -8,7 +8,7 @@ from robolab_turtlebot import Turtlebot
 
 import detection
 import movement
-import drive_around
+import robolab_turtlebot.MAIN.drive_around1 as drive_around1
 
 killSwitch = 0
 turtle = Turtlebot(rgb=True, pc=True)
@@ -48,7 +48,7 @@ def main():
 
     movement.drive_to_ball(turtle, objects, 0.3, stop_requested=is_stop_requested)
 
-    drive_around.drive_around(turtle)
+    drive_around1.drive_around(turtle)
 
 
 if __name__ == '__main__':
