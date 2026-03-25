@@ -65,8 +65,9 @@ def registerCallback(fun):
 def main():
     """Robot entrypoint: safety setup, ball find, center and approach."""
     turtle.register_button_event_cb(registerCallback)
+    wait_rate = Rate(10)
     while(not buttonPressed):
-        Rate.sleep()
+        wait_rate.sleep()
     
     tondaVS()
     drive_around.drive_around(turtle)
