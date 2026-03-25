@@ -142,11 +142,16 @@ def drive_around(turtle):
     global turtle_ref
     turtle_ref = turtle
 
+    print("Začínám s objížděním míčku.")
+    
     # KROK A: vynulování odometrie před manévrem
     turtle.reset_odometry()
     wait_rate = Rate(10)
-    
-    while turtle.get_odometry() != [0,0,0]:
+
+    while True:
+        x, y, a = turtle.get_odometry()
+        if x == 0 and y == 0 and a == 0:
+            break
         wait_rate.sleep()
 
     # KROK B: registrace bumper callbacku kvůli bezpečnosti
