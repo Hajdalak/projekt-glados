@@ -1,28 +1,82 @@
-from robolab_turtlebot import Turtlebot, Rate, get_time
+from __future__ import print_function
+import math
+from robolab_turtlebot import Turtlebot, Rate
 
-t = Turtlebot()
-r = Rate(10)
+killSwitch = 0
+turtle_ref = None
 
-# počkej, až bude odometrie dostupná
-t.wait_for_odometry()
 
-odo0 = t.get_odometry()
-if odo0 is None:
-    print("Odometry is None (not ready).")
-    exit(1)
+def wrap_pi(a):
+    while a > math.pi:
+        a -= 2.0 * math.pi
+    while a < -math.pi:
+        a += 2.0 * math.pi
+    return a
 
-a0 = odo0[2]
 
-t0 = get_time()
-while get_time() - t0 < 1.0:
-    t.cmd_velocity(0.0, +0.4)   # fyzicky doleva
-    r.sleep()
-t.cmd_velocity(0.0, 0.0)
+def stop(turtle):
+    turtle.cmd_velocity(0.0, 0.0)
 
-odo1 = t.get_odometry()
-if odo1 is None:
-    print("Odometry is None after turning.")
-    exit(1)
 
-a1 = odo1[2]
-print("a0=", a0, "a1=", a1, "delta=", a1 - a0)
+def bumper_callback(msg):
+    global killSwitch
+    killSwitch = msg.state
+    if turtle_ref is not None:
+        turtle_ref.cmd_velocity(0.0, 0.0)
+    print("bumper {}".format(killSwitch))
+
+
+def rotate_by(turtle, rate, delta_rad, w=0.5, tol=0.05):
+    _, _, a0 = turtle.get_odometry()
+    target = wrap_pi(a0 + delta_rad)
+
+    print("START angle:", a0)
+    print("TARGET angle:", target)
+    print("DELTA rad:", delta_rad)
+    print("DELTA deg:", math.degrees(delta_rad))
+
+    while not turtle.is_shutting_down() and killSwitch == 0:
+        _, _, a = turtle.get_odometry()
+        err = wrap_pi(target - a)
+
+        print("current:", a, " err:", err)
+
+        if abs(err) < tol:
+            break
+
+        ang = max(-abs(w), min(abs(w), 1.5 * err))
+        turtle.cmd_velocity(0.0, ang)
+        rate.sleep()
+
+    stop(turtle)
+    print("rotation done")
+
+
+def test_rotations(turtle):
+    rate = Rate(10)
+
+    turtle.reset_odometry()
+
+    print("\nTEST 1: +30 deg")
+    rotate_by(turtle, rate, math.radians(30), w=0.4)
+
+    stop(turtle)
+    rate.sleep()
+
+    print("\nTEST 2: -30 deg")
+    rotate_by(turtle, rate, math.radians(-30), w=0.4)
+
+    stop(turtle)
+
+
+def main():
+    global turtle_ref
+    turtle = Turtlebot(rgb=False, depth=False, pc=False)
+    turtle_ref = turtle
+    turtle.register_bumper_event_cb(bumper_callback)
+
+    test_rotations(turtle)
+
+
+if __name__ == "__main__":
+    main()
