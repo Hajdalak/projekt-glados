@@ -16,24 +16,24 @@ def _should_stop(stop_requested=None):
 
 def count_objects(turtle):
     """Print how many HSV-detected objects are currently visible."""
-    objects = vision.detect_objects_by_hsv_and_area(turtle)
+    objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
     print("Detekovano objektu: {}.".format(len(objects)))
 
 
 def show_detected_objects(turtle):
     """Print one-step detection result for quick debugging."""
-    objects = vision.detect_objects_by_hsv_and_area(turtle)
+    objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
     print("Detected objects: {}.".format(len(objects)))
 
 
 def find_ball(turtle, stop_requested=None, search_angular_speed=0.3):
     """Rotate in place until a ball is detected, then return its center (cx, cy)."""
     print("Hledam micek...")
-    objects = vision.detect_objects_by_hsv_and_area(turtle)
+    objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
 
     while len(objects) == 0 and not _should_stop(stop_requested):
         turtle.cmd_velocity(angular=search_angular_speed)
-        objects = vision.detect_objects_by_hsv_and_area(turtle)
+        objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
 
     if _should_stop(stop_requested):
         turtle.cmd_velocity(linear=0.0, angular=0.0)

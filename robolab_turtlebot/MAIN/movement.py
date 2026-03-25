@@ -53,7 +53,7 @@ def recenter_between_two_objects(turtle, image_width=640, tolerance=20, kp=0.005
         print("Centrovani preskoceno: byl pozadovan stop.")
         return None
 
-    objects = vision.detect_objects_by_hsv_and_area(turtle)
+    objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='gate')
     if len(objects) < 2:
         print("Centrovani selhalo: Nevidim obe vezicky v obrazu.")
         return None
@@ -82,7 +82,7 @@ def recenter_between_two_objects(turtle, image_width=640, tolerance=20, kp=0.005
         
         turtle.cmd_velocity(angular=direction * angular_vel)
 
-        objects = vision.detect_objects_by_hsv_and_area(turtle)
+        objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='gate')
         if len(objects) < 2:
             print("Centrovani preruseno: jeden nebo oba objekty zmizely ze zaberu.")
             turtle.cmd_velocity(angular=0.0)
@@ -107,7 +107,7 @@ def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop
     avg_point = None
     
     if target_type == 'ball':
-        objects = vision.detect_objects_by_hsv_and_area(turtle)
+        objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
         if len(objects) > 0 and not should_stop(stop_requested):
             cx, cy = float(objects[0][0]), float(objects[0][1])
             print("Ziskavam vzdalenost od micku pro hranici {} m.".format(target_boundary))
@@ -170,7 +170,7 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
     # === Final approach to target_distance ===
     avg_point = None
     if target_type == 'ball':
-        objects = vision.detect_objects_by_hsv_and_area(turtle)
+        objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
         if len(objects) > 0 and not should_stop(stop_requested):
             cx, cy = float(objects[0][0]), float(objects[0][1])
             print("Ziskavam vzdalenost od micku pro finalni dojezd.")
@@ -201,7 +201,7 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
             turtle.cmd_velocity(linear=0.0, angular=0.0)
 
             if target_type == 'ball':
-                objects = vision.detect_objects_by_hsv_and_area(turtle)
+                objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
                 if len(objects) > 0:
                     cx, cy = float(objects[0][0]), float(objects[0][1])
                     avg_point = vision.get_average_3d_point(turtle, cx, cy)
@@ -260,7 +260,7 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
 
 def recenter_to_ball(turtle, image_width=640, tolerance=20, kp=0.005):
     """Center robot on visible ball and return (cx, cy), or None if ball is lost."""
-    objects = vision.detect_objects_by_hsv_and_area(turtle)
+    objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
     if len(objects) == 0:
         print("Micek behem jizdy zmizel z obrazu.")
         return None
@@ -282,7 +282,7 @@ def recenter_to_ball(turtle, image_width=640, tolerance=20, kp=0.005):
         direction = 1 if error > 0 else -1
         turtle.cmd_velocity(angular=direction * angular_vel)
 
-        objects = vision.detect_objects_by_hsv_and_area(turtle)
+        objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
         if len(objects) == 0:
             print("Micek behem centrovani zmizel z obrazu.")
             turtle.cmd_velocity(angular=0.0)

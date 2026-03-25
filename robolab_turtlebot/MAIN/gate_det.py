@@ -8,7 +8,7 @@ from robolab_turtlebot import Turtlebot
 
 import detection
 import movement
-import robolab_turtlebot.MAIN.drive_around1 as drive_around1
+import drive_around 
 
 killSwitch = 0
 turtle = Turtlebot(rgb=True, pc=True)

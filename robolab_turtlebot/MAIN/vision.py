@@ -8,7 +8,7 @@ from __future__ import print_function
 import cv2
 import numpy as np
 
-# Tuned for the green ball in current lab lighting.
+# HSV profile tuned for the ball in current lab lighting.
 BALL_MIN_H = 37
 BALL_MAX_H = 74
 BALL_MIN_S = 98
@@ -16,9 +16,54 @@ BALL_MAX_S = 255
 BALL_MIN_V = 25
 BALL_MAX_V = 255
 
-DEFAULT_MIN_AREA = 200
-DEFAULT_MAX_AREA = 16000
-DEFAULT_AXIS_RATIO_MIN = 0.75
+# HSV profile tuned for gate poles.
+GATE_MIN_H = 120
+GATE_MAX_H = 159
+GATE_MIN_S = 70
+GATE_MAX_S = 171
+# V is fixed in this lightweight tuner: 0..255
+GATE_MIN_V = 0
+GATE_MAX_V = 255
+
+BALL_DEFAULT_MIN_AREA = 200
+BALL_DEFAULT_MAX_AREA = 8000
+BALL_DEFAULT_AXIS_RATIO_MIN = 0.75
+
+# Backward-compatible alias used by legacy call sites/default args.
+DEFAULT_AXIS_RATIO_MIN = BALL_DEFAULT_AXIS_RATIO_MIN
+
+GATE_DEFAULT_MIN_AREA = 120
+GATE_DEFAULT_MAX_AREA = 20000
+GATE_DEFAULT_AXIS_RATIO_MIN = 0.10
+
+
+def _resolve_detection_profile(target_type):
+    """Return HSV and component-filter defaults for the given target type."""
+    if target_type == 'gate':
+        return {
+            'min_h': GATE_MIN_H,
+            'max_h': GATE_MAX_H,
+            'min_s': GATE_MIN_S,
+            'max_s': GATE_MAX_S,
+            'min_v': GATE_MIN_V,
+            'max_v': GATE_MAX_V,
+            'min_area': GATE_DEFAULT_MIN_AREA,
+            'max_area': GATE_DEFAULT_MAX_AREA,
+            'axis_tolerance': GATE_DEFAULT_AXIS_RATIO_MIN,
+        }
+
+    # Default behavior remains the ball detector.
+    return {
+        'min_h': BALL_MIN_H,
+        'max_h': BALL_MAX_H,
+        'min_s': BALL_MIN_S,
+        'max_s': BALL_MAX_S,
+        'min_v': BALL_MIN_V,
+        'max_v': BALL_MAX_V,
+        'min_area': BALL_DEFAULT_MIN_AREA,
+        'max_area': BALL_DEFAULT_MAX_AREA,
+        'axis_tolerance': BALL_DEFAULT_AXIS_RATIO_MIN,
+    }
 
 
 def get_hsv(turtle):
@@ -36,15 +81,7 @@ def get_hsv(turtle):
     return cv2.cvtColor(rgb_image, cv2.COLOR_BGR2HSV)
 
 
-def create_hsv_mask(
-    hsv_image,
-    min_h=BALL_MIN_H,
-    max_h=BALL_MAX_H,
-    min_s=BALL_MIN_S,
-    max_s=BALL_MAX_S,
-    min_v=BALL_MIN_V,
-    max_v=BALL_MAX_V,
-):
+def create_hsv_mask(hsv_image, min_h, max_h, min_s, max_s, min_v, max_v):
     """Create a binary mask for pixels inside the given HSV interval."""
     lower = np.array([min_h, min_s, min_v], dtype=np.uint8)
     upper = np.array([max_h, max_s, max_v], dtype=np.uint8)
@@ -70,16 +107,34 @@ def find_centroids(mask, max_area, min_area, axis_tolerance=DEFAULT_AXIS_RATIO_M
 
 def detect_objects_by_hsv_and_area(
     turtle,
-    max_area=DEFAULT_MAX_AREA,
-    min_area=DEFAULT_MIN_AREA,
-    axis_tolerance=DEFAULT_AXIS_RATIO_MIN,
+    max_area=None,
+    min_area=None,
+    axis_tolerance=None,
+    target_type='ball',
 ):
     """Return a list of object centroids (cx, cy) detected in the configured HSV range."""
     hsv = get_hsv(turtle)
     if hsv is None:
         return []
 
-    mask = create_hsv_mask(hsv)
+    profile = _resolve_detection_profile(target_type)
+
+    if max_area is None:
+        max_area = profile['max_area']
+    if min_area is None:
+        min_area = profile['min_area']
+    if axis_tolerance is None:
+        axis_tolerance = profile['axis_tolerance']
+
+    mask = create_hsv_mask(
+        hsv,
+        profile['min_h'],
+        profile['max_h'],
+        profile['min_s'],
+        profile['max_s'],
+        profile['min_v'],
+        profile['max_v'],
+    )
 
     object_centroids = find_centroids(mask, max_area, min_area, axis_tolerance=axis_tolerance)
     return object_centroids
@@ -87,9 +142,10 @@ def detect_objects_by_hsv_and_area(
 
 def detect_objects_with_debug_frame(
     turtle,
-    max_area=DEFAULT_MAX_AREA,
-    min_area=DEFAULT_MIN_AREA,
-    axis_tolerance=DEFAULT_AXIS_RATIO_MIN,
+    max_area=None,
+    min_area=None,
+    axis_tolerance=None,
+    target_type='ball',
 ):
     """Return centroids, annotated RGB frame, and binary mask for debugging."""
     try:
@@ -104,7 +160,25 @@ def detect_objects_with_debug_frame(
         return [], None, None
 
     hsv = cv2.cvtColor(rgb_image, cv2.COLOR_BGR2HSV)
-    mask = create_hsv_mask(hsv)
+
+    profile = _resolve_detection_profile(target_type)
+
+    if max_area is None:
+        max_area = profile['max_area']
+    if min_area is None:
+        min_area = profile['min_area']
+    if axis_tolerance is None:
+        axis_tolerance = profile['axis_tolerance']
+
+    mask = create_hsv_mask(
+        hsv,
+        profile['min_h'],
+        profile['max_h'],
+        profile['min_s'],
+        profile['max_s'],
+        profile['min_v'],
+        profile['max_v'],
+    )
     object_centroids = find_centroids(mask, max_area, min_area, axis_tolerance=axis_tolerance)
 
     annotated = rgb_image.copy()
