@@ -26,7 +26,7 @@ def bumper_callback(msg):
     print('bumper {}'.format(killSwitch))
 
 
-def rotate_by(turtle, rate, delta_rad, w=0.6, tol=0.08):
+def rotate_by(turtle, rate, delta_rad, w=0.6, tol=0.06):
     # KROK: načtení aktuální orientace robota
     _, _, a0 = turtle.get_odometry()
 
@@ -43,7 +43,7 @@ def rotate_by(turtle, rate, delta_rad, w=0.6, tol=0.08):
             break
 
         # KROK: P-regulace úhlové rychlosti s omezením na max. rychlost
-        ang = max(-abs(w), min(abs(w), 0.8 * err))
+        ang = max(-abs(w), min(abs(w), 1.5 * err))
 
         # KROK: poslat robotovi příkaz pouze na rotaci
         turtle.cmd_velocity(0.0, ang)
