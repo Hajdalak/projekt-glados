@@ -69,7 +69,7 @@ def cekejNaTlacirko():
 def main():
     """Robot entrypoint: safety setup, ball find, center and approach."""
     #cekejNaTlacirko()
-    
+    cekejNaTlacirko()
     start_drive()
     drive_around.drive_around(turtle)
     gateJed()
