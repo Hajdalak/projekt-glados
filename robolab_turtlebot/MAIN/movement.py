@@ -16,10 +16,12 @@ def drive_forward_for(turtle, speed, duration, stop_requested=None):
     rate = Rate(10)
     t = get_time()
 
+    # Keep sending forward velocity until the requested time elapses.
     while (get_time() - t < duration) and not should_stop(stop_requested):
         turtle.cmd_velocity(linear=speed, angular=0.0)
         rate.sleep()
 
+    # Explicitly stop after the timed segment.
     turtle.cmd_velocity(0.0, 0.0)
 
     if should_stop(stop_requested):
@@ -32,11 +34,13 @@ def recenter_between_two_objects(turtle, image_width=640, tolerance=20, kp=0.005
         print("Centrovani preskoceno: byl pozadovan stop.")
         return None
 
+    # Detect the two gate poles used for midpoint centering.
     objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='gate')
     if len(objects) < 2:
         print("Centrovani selhalo: Nevidim obe vezicky v obrazu.")
         return None
 
+    # Compute the initial midpoint between both detected objects.
     cx1, cy1 = float(objects[0][0]), float(objects[0][1])
     cx2, cy2 = float(objects[1][0]), float(objects[1][1])
 
@@ -48,6 +52,7 @@ def recenter_between_two_objects(turtle, image_width=640, tolerance=20, kp=0.005
         center_x = image_width / 2.0
         error = center_x - mid_cx
 
+        # Stop rotating once the midpoint is close enough to image center.
         if abs(error) <= tolerance:
             break
 
@@ -57,14 +62,17 @@ def recenter_between_two_objects(turtle, image_width=640, tolerance=20, kp=0.005
             angular_vel = max_vel
         direction = 1 if error > 0 else -1
 
+        # Rotate proportionally toward the midpoint.
         turtle.cmd_velocity(linear=0.0, angular=direction * angular_vel)
 
+        # Refresh detections continuously during centering.
         objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='gate')
         if len(objects) < 2:
             print("Centrovani preruseno: jeden nebo oba objekty zmizely ze zaberu.")
             turtle.cmd_velocity(0.0, 0.0)
             return None
 
+        # Recompute the midpoint from the newest detections.
         cx1, cy1 = float(objects[0][0]), float(objects[0][1])
         cx2, cy2 = float(objects[1][0]), float(objects[1][1])
         mid_cx = (cx1 + cx2) / 2.0
@@ -87,6 +95,7 @@ def recenter_to_ball(turtle, image_width=640, tolerance=20, kp=0.005, stop_reque
         print("Centrovani micku preskoceno: byl pozadovan stop.")
         return None
 
+    # Detect the current ball position in the image.
     objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
     if len(objects) == 0:
         print("Micek behem jizdy zmizel z obrazu.")
@@ -99,6 +108,7 @@ def recenter_to_ball(turtle, image_width=640, tolerance=20, kp=0.005, stop_reque
         center_x = image_width / 2.0
         error = center_x - cx
 
+        # Stop rotating once the ball is centered well enough.
         if abs(error) <= tolerance:
             break
 
@@ -108,8 +118,10 @@ def recenter_to_ball(turtle, image_width=640, tolerance=20, kp=0.005, stop_reque
             angular_vel = max_vel
         direction = 1 if error > 0 else -1
 
+        # Rotate proportionally toward the ball center.
         turtle.cmd_velocity(linear=0.0, angular=direction * angular_vel)
 
+        # Refresh the ball position during centering.
         objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
         if len(objects) == 0:
             print("Micek behem centrovani zmizel z obrazu.")
@@ -136,6 +148,7 @@ def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop
     avg_point = None
 
     if target_type == 'ball':
+        # Measure depth directly on the currently detected ball centroid.
         objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
         if len(objects) > 0 and not should_stop(stop_requested):
             cx, cy = float(objects[0][0]), float(objects[0][1])
@@ -146,6 +159,7 @@ def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop
         else:
             print("Krok priblizeni preskocen: stop pred merenim vzdalenosti.")
     else:  # target_type == 'gate'
+        # For the gate, sample depth in the camera center toward the wall.
         center_cx, center_cy = 320.0, 240.0
         if not should_stop(stop_requested):
             print("Ziskavam vzdalenost od zdi pro hranici {} m.".format(target_boundary))
@@ -157,6 +171,7 @@ def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop
         current_z = float(avg_point[2])
         distance_to_travel = current_z - target_boundary
 
+        # Move only if the robot is still farther than the requested boundary.
         if distance_to_travel > 0 and not should_stop(stop_requested):
             print("Zmerena hloubka: {:.2f} m. Jedu vpred {:.2f} m k hranici {}m.".format(
                 current_z, distance_to_travel, target_boundary
@@ -167,6 +182,7 @@ def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop
             print("Provadim centrovani na {} m...".format(target_boundary))
             turtle.cmd_velocity(linear=0.0, angular=0.0)
 
+            # Re-center after each approach segment.
             if target_type == 'ball':
                 recenter_to_ball(turtle, stop_requested=stop_requested)
             else:
@@ -189,10 +205,11 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
         print("Jizda zrusena: stop pred zacatkem sekvence.")
         return
 
+    # Use a single fixed forward speed for all approach phases.
     speed = 0.15
     center_cx, center_cy = 320.0, 240.0
 
-    # === Stop 1: 1 m before target ===
+    # First coarse stop around 1 meter from the target.
     approach_and_center(turtle, 1.0, speed, target_type, stop_requested=stop_requested)
 
     if should_stop(stop_requested):
@@ -200,7 +217,7 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
         print("Sekvence jizdy ukoncena kvuli stop pozadavku.")
         return
 
-    # === Stop 2: 0.5 m before target ===
+    # Second coarse stop around 0.5 meter from the target.
     approach_and_center(turtle, 0.5, speed, target_type, stop_requested=stop_requested)
 
     if should_stop(stop_requested):
@@ -208,7 +225,7 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
         print("Sekvence jizdy ukoncena kvuli stop pozadavku.")
         return
 
-    # === Final approach to target_distance ===
+    # Final depth measurement for the last approach segment.
     avg_point = None
     if target_type == 'ball':
         objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
@@ -231,6 +248,7 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
         current_z = float(avg_point[2])
         distance_to_travel = current_z - target_distance
 
+        # Execute the main final forward segment.
         if distance_to_travel > 0 and not should_stop(stop_requested):
             print("Zmerena hloubka: {:.2f} m. Jedu vpred {:.2f} m.".format(current_z, distance_to_travel))
 
@@ -240,6 +258,7 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
             print("Provadim kontrolu a doladeni...")
             turtle.cmd_velocity(linear=0.0, angular=0.0)
 
+            # Re-sample depth after stopping to measure the remaining error.
             if target_type == 'ball':
                 objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
                 if len(objects) > 0:
@@ -254,6 +273,7 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
                 current_z = float(avg_point[2])
                 error_dist = current_z - target_distance
 
+                # Apply one extra short correction if the robot is still too far.
                 if error_dist > 0.02 and not should_stop(stop_requested):
                     print("Doladuji o {:.2f} m.".format(error_dist))
                     duration_fine = error_dist / speed
@@ -268,7 +288,7 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
         print("Sekvence jizdy ukoncena kvuli stop pozadavku.")
         return
 
-    # End of function: re-center and, if still far, finish the approach.
+    # Re-center once more before the last residual distance check.
     if target_type == 'ball':
         centered = recenter_to_ball(turtle, stop_requested=stop_requested)
     else:
@@ -295,8 +315,10 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
     else:
         print("Kontrola po centrovani preskocena: byl pozadovan stop.")
 
+    # End the full approach sequence with an explicit zero command.
     turtle.cmd_velocity(0.0, 0.0)
     if should_stop(stop_requested):
         print("Sekvence jizdy ukoncena kvuli stop pozadavku.")
     else:
         print("Sekvence jizdy dokoncena.")
+
