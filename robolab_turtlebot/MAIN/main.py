@@ -1,75 +1,88 @@
-# Role of this module:
-# - Wire high-level robot behavior.
-# - Register safety callbacks.
-# - Coordinate detection and movement modules.
-
 from __future__ import print_function
+import sys
 from robolab_turtlebot import Turtlebot, Rate
 
 import detection
 import movement
 import drive_around
+import safety
 
-killSwitch = 0
 turtle = Turtlebot(rgb=True, pc=True)
 buttonPressed = False
 
-def is_stop_requested():
-    """Return True when the global safety stop (killSwitch) is active."""
-    return killSwitch != 0
+
+def abort_if_needed():
+    if safety.is_stop_requested():
+        turtle.cmd_velocity(0.0, 0.0)
+        print("Program ukoncen kvuli nouzovemu stopu.")
+        raise SystemExit(1)
 
 
 def bumper_callback(msg):
-    """Emergency bumper callback: latch killSwitch and stop robot motion."""
-    global killSwitch
+    """Emergency bumper callback: latch stop forever and stop robot immediately."""
+    if msg.state == 1:
+        safety.request_stop("bumper")
+        turtle.cmd_velocity(0.0, 0.0)
+        print("bumper 1. Do neceho jsem narazil.")
 
-    killSwitch = msg.state
-    turtle.cmd_velocity(linear=0, angular=0)
-    print('bumper {}. Do neceho jsem narazil.'.format(killSwitch))
 
 def start_drive():
-    """Register safety callback, find ball, center on it, and approach it."""
-    turtle.register_bumper_event_cb(bumper_callback)
+    """Find ball, center on it, and approach it."""
+    abort_if_needed()
 
-    # Find the ball before starting the approach sequence.
-    ball_center = detection.find_ball(turtle, stop_requested=is_stop_requested)
+    ball_center = detection.find_ball(turtle, stop_requested=safety.is_stop_requested)
     if ball_center is None:
+        abort_if_needed()
         print("Byl aktivovan killswitch, koncim.")
-        return
+        return False
 
-    # Center the robot on the visible ball.
-    centered = movement.recenter_to_ball(turtle)
+    centered = movement.recenter_to_ball(turtle, stop_requested=safety.is_stop_requested)
     if centered is None:
+        abort_if_needed()
         print("Micek nelze vystredit, koncim.")
-        return
+        return False
 
-    # Build object tuple for the drive-to-ball helper.
     cx, cy = centered
     objects = [(cx, cy)]
 
-    # Drive toward the ball and stop at the target distance.
-    movement.drive_to_ball(turtle, objects, 0.3, stop_requested=is_stop_requested)
+    movement.drive_to_ball(
+        turtle,
+        objects,
+        0.3,
+        stop_requested=safety.is_stop_requested
+    )
+
+    abort_if_needed()
+    return True
 
 
 def gate_go():
     """Center between gate objects and drive toward the gate."""
-    # Center the robot between the two visible gate objects.
-    gate_center = movement.recenter_between_two_objects(turtle, stop_requested=is_stop_requested)
+    abort_if_needed()
+
+    gate_center = movement.recenter_between_two_objects(
+        turtle,
+        stop_requested=safety.is_stop_requested
+    )
     if gate_center is None:
+        abort_if_needed()
         print("Pocatecni centrovani selhalo: brána neni videt. Konec.")
-        return
+        return False
 
-    # Drive toward the gate and stop at the target distance.
-    movement.drive_to_ball(turtle, [], target_distance=0.3, target_type='gate', stop_requested=is_stop_requested)
+    movement.drive_to_ball(
+        turtle,
+        [],
+        target_distance=0.3,
+        target_type='gate',
+        stop_requested=safety.is_stop_requested
+    )
 
-
-buttonPressed = False
+    abort_if_needed()
+    return True
 
 
 def registerCallback(fun):
-    """Set buttonPressed flag when the start button is pressed."""
     global buttonPressed
-
     if fun.state == 1:
         buttonPressed = True
 
@@ -79,24 +92,33 @@ def wait_for_button():
     turtle.register_button_event_cb(registerCallback)
     wait_rate = Rate(10)
 
-    # Keep waiting until the button press is detected.
-    while not buttonPressed:
+    while not buttonPressed and not safety.is_stop_requested():
         wait_rate.sleep()
+
+    abort_if_needed()
 
 
 def main():
-    """Robot entrypoint: wait for button, approach ball, drive around it, and go to gate."""
-    # Wait for the user to start the robot.
-    wait_for_button()
+    """Robot entrypoint."""
+    turtle.register_bumper_event_cb(bumper_callback)
 
-    # Find, center, and approach the ball.
-    start_drive()
+    try:
+        wait_for_button()
 
-    # Execute the drive-around maneuver.
-    drive_around.drive_around(turtle)
+        ok = start_drive()
+        if not ok:
+            return
 
-    # Center on the gate and approach it.
-    gate_go()
+        abort_if_needed()
+        drive_around.drive_around(turtle, stop_requested=safety.is_stop_requested)
+
+        abort_if_needed()
+        ok = gate_go()
+        if not ok:
+            return
+
+    finally:
+        turtle.cmd_velocity(0.0, 0.0)
 
 
 if __name__ == '__main__':

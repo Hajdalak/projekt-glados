@@ -1,27 +1,19 @@
 from __future__ import print_function
-
-# Role of this module:
-# - Provide object-detection helpers used by the main flow.
-# - Encapsulate search routines such as finding the ball.
-
 import vision
 
 
 def _should_stop(stop_requested=None):
-    """Return True when a stop callback says motion should stop."""
     if stop_requested is None:
         return False
     return bool(stop_requested())
 
 
 def count_objects(turtle):
-    """Print how many HSV-detected objects are currently visible."""
     objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
     print("Detekovano objektu: {}.".format(len(objects)))
 
 
 def show_detected_objects(turtle):
-    """Print one-step detection result for quick debugging."""
     objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
     print("Detected objects: {}.".format(len(objects)))
 
@@ -32,11 +24,12 @@ def find_ball(turtle, stop_requested=None, search_angular_speed=0.3):
     objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
 
     while len(objects) == 0 and not _should_stop(stop_requested):
-        turtle.cmd_velocity(angular=search_angular_speed)
+        turtle.cmd_velocity(linear=0.0, angular=search_angular_speed)
         objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
 
+    turtle.cmd_velocity(0.0, 0.0)
+
     if _should_stop(stop_requested):
-        turtle.cmd_velocity(linear=0.0, angular=0.0)
         print("Hledani micku preruseno: byl pozadovan stop.")
         return None
 
