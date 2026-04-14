@@ -82,7 +82,7 @@ def gate_go():
     movement.drive_to_ball(
         turtle,
         [],
-        target_distance=0.3,
+        target_distance=0.2,
         target_type='gate',
         stop_requested=safety.is_stop_requested
     )
