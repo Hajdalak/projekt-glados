@@ -151,7 +151,7 @@ def wrap_pi(a):
     return a
 
 
-def rotate_by(turtle, rate, delta_rad, w=0.25, tol=0.05, stop_requested=None):
+def rotate_by(turtle, rate, delta_rad, w=0.55, tol=0.05, stop_requested=None):
     """Rotate robot by the requested relative angle using odometry feedback."""
     _, _, a0 = turtle.get_odometry()
     target = wrap_pi(a0 + delta_rad)
@@ -201,84 +201,89 @@ def get_depth_z(turtle, cx=320.0, cy=240.0, window_size=7):
 
 def find_opening_by_depth_scan(
     turtle,
-    scan_step_deg=15.0,
-    opening_depth_threshold=0.35,
-    max_scan_deg=360.0,
+    scan_step_deg=8.0,
+    opening_depth_threshold=0.40,
+    max_scan_deg=180.0,
     stop_requested=None,
 ):
-    """Scan around the robot and return the center angle of the widest open sector."""
+    """Rotate until the garage opening is bracketed and return a correction from the current heading."""
     if should_stop(stop_requested):
         print("Skenovani garaze preskoceno: byl pozadovan stop.")
         return None
 
     rate = Rate(10)
     step_rad = math.radians(scan_step_deg)
-    steps = int(round(max_scan_deg / scan_step_deg))
+    max_steps = int(round(max_scan_deg / scan_step_deg))
+
+    started_open = None
+    finished_open = None
+    steps_done = 0
     open_flags = []
-    depth_samples = []
 
     print("Zacinam hloubkove skenovani vyjezdu z garaze.")
 
-    for _ in range(steps):
+    prev_open = False
+    for step_idx in range(max_steps + 1):
         if should_stop(stop_requested):
             turtle.cmd_velocity(0.0, 0.0)
             return None
 
-        z = get_depth_z(turtle, 320.0, 240.0, window_size=7)
-        depth_samples.append(z)
+        z = get_depth_z(turtle, 320.0, 240.0, window_size=9)
         is_open = (z is not None) and (z > opening_depth_threshold)
         open_flags.append(is_open)
+
+        print("scan {:02d}: depth={} m, open={}".format(
+            step_idx,
+            "None" if z is None else "{:.2f}".format(z),
+            is_open,
+        ))
+
+        if (not prev_open) and is_open and started_open is None:
+            started_open = step_idx
+            print("Nasel jsem zacatek otvoru.")
+
+        elif prev_open and (not is_open) and started_open is not None:
+            finished_open = step_idx - 1
+            print("Nasel jsem konec otvoru, skenovani konci.")
+            break
+
+        prev_open = is_open
+
+        if step_idx == max_steps:
+            break
 
         if not rotate_by(
             turtle,
             rate,
             delta_rad=step_rad,
-            w=0.50,
-            tol=0.07,
+            w=0.65,
+            tol=0.06,
             stop_requested=stop_requested,
         ):
             return None
+        steps_done += 1
 
-    if not any(open_flags):
+    if started_open is None:
         print("Pri skenovani jsem nenasel zadny otevreny smer.")
         return None
 
-    doubled = open_flags + open_flags
-    best_start = None
-    best_len = 0
+    if finished_open is None:
+        finished_open = steps_done
+        print("Otvor zustal otevreny az do konce skenu, beru posledni viditelnou cast.")
 
-    current_start = None
-    current_len = 0
-    for i, flag in enumerate(doubled):
-        if flag and current_start is None:
-            current_start = i
-            current_len = 1
-        elif flag:
-            current_len += 1
-            if current_len > steps:
-                current_start += 1
-                current_len = steps
-        else:
-            if current_start is not None and current_len > best_len:
-                best_start = current_start
-                best_len = current_len
-            current_start = None
-            current_len = 0
-
-    if current_start is not None and current_len > best_len:
-        best_start = current_start
-        best_len = current_len
-
-    mid_idx = (best_start + (best_len - 1) / 2.0) % steps
-    delta_rad = wrap_pi(mid_idx * step_rad)
+    center_step = 0.5 * (started_open + finished_open)
+    current_step = float(steps_done)
+    correction_rad = wrap_pi((center_step - current_step) * step_rad)
 
     print(
-        "Otevreny sektor nalezen: {} vzorku, stred otoceni {:.1f} stupnu.".format(
-            best_len, math.degrees(delta_rad)
+        "Otvor nalezen mezi kroky {} a {}, centrovaci dotoceni je {:.1f} stupnu.".format(
+            started_open,
+            finished_open,
+            math.degrees(correction_rad),
         )
     )
 
-    return delta_rad
+    return correction_rad
 
 
 def center_opening_with_side_depth(
@@ -343,9 +348,9 @@ def leave_garage(
 
     delta_rad = find_opening_by_depth_scan(
         turtle,
-        scan_step_deg=15.0,
+        scan_step_deg=8.0,
         opening_depth_threshold=opening_depth_threshold,
-        max_scan_deg=360.0,
+        max_scan_deg=180.0,
         stop_requested=stop_requested,
     )
     if delta_rad is None:
@@ -383,7 +388,7 @@ def leave_garage(
         turtle,
         rate,
         dist_m=exit_distance,
-        v=0.10,
+        v=0.14,
         tol=0.02,
         stop_requested=stop_requested,
     )
@@ -579,5 +584,6 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
         print("Sekvence jizdy ukoncena kvuli stop pozadavku.")
     else:
         print("Sekvence jizdy dokoncena.")
+
 
 

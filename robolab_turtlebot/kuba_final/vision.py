@@ -72,8 +72,6 @@ def _resolve_detection_profile(target_type):
 def get_hsv(turtle):
     """Return an HSV image from the Turtlebot RGB camera."""
     try:
-        # Wait for a fresh RGB frame before conversion.
-        turtle.wait_for_rgb_image()
         rgb_image = turtle.get_rgb_image()
     except Exception as exc:
         print("Failed to read RGB frame in get_hsv: {}".format(exc))
@@ -160,8 +158,6 @@ def detect_objects_with_debug_frame(
 ):
     """Return centroids, annotated RGB frame, and binary mask for debugging."""
     try:
-        # Read a fresh RGB frame for debug visualization.
-        turtle.wait_for_rgb_image()
         rgb_image = turtle.get_rgb_image()
     except Exception as exc:
         print("Failed to read RGB frame in debug detection: {}".format(exc))
@@ -234,8 +230,6 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
     print("vision.get_average_3d_point started.")
 
     try:
-        # Wait for a fresh point-cloud frame before sampling.
-        turtle.wait_for_point_cloud()
         pc = turtle.get_point_cloud()
     except Exception as exc:
         print("Failed to read point cloud: {}".format(exc))
@@ -288,7 +282,6 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
 def get_average_depth(turtle, cx, cy, window_size=7):
     """Return averaged depth around image coordinates."""
     try:
-        turtle.wait_for_depth_image()
         depth = turtle.get_depth_image()
     except Exception as exc:
         print("Failed to read depth image: {}".format(exc))
@@ -300,6 +293,9 @@ def get_average_depth(turtle, cx, cy, window_size=7):
 
     col = int(round(cx))
     row = int(round(cy))
+
+    if len(depth.shape) == 3:
+        depth = depth[:, :, 0]
 
     h, w = depth.shape
     half_w = window_size // 2
