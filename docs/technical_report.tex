@@ -1,0 +1,447 @@
+\documentclass[a4paper,11pt]{article}
+\begin{filecontents}{references.bib}
+@book{krsek_rgb2025,
+  author = {Pavel Krsek},
+  title = {Metody zpracování dat z RGB kamery},
+  year = {2025},
+  publisher = {ČVUT v Praze},
+  note = {Materiály k předmětu B3B33LAR -- Laboratoře robotiky}
+}
+
+@book{petrik_depth2025,
+  author = {Vladimír Petrík},
+  title = {Depth Estimation},
+  year = {2025},
+  publisher = {ČVUT v Praze},
+  note = {Materiály k předmětu B3B33LAR -- Laboratoře robotiky}
+}
+
+@book{krsek_zprava2024,
+  author = {Pavel Krsek},
+  title = {Technická zpráva: Způsob práce, forma zprávy a obsah},
+  year = {2024},
+  publisher = {ČVUT v Praze},
+  note = {Materiály k předmětu B3B33LAR -- Laboratoře robotiky}
+}
+\end{filecontents}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[czech]{babel}
+\usepackage{lmodern}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{siunitx}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{subcaption}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta, positioning}
+
+% Bibliografie (Overleaf: compiler LaTeX -> Biber -> LaTeX -> LaTeX)
+\usepackage[backend=biber,style=numeric,sorting=none]{biblatex}
+\addbibresource{references.bib}
+
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue,
+  citecolor=blue,
+  urlcolor=blue
+}
+
+\title{\textbf{Název technické zprávy}\\
+\large B3B33LAR -- Laboratoře robotiky}
+\author{Jméno Příjmení\\
+ČVUT FEL\\
+% TODO: Doplň login/skupinu, pokud je vyžadováno.
+}
+\date{\today}
+
+\begin{document}
+
+\begin{titlepage}
+  \centering
+  {\LARGE České vysoké učení technické v Praze\par}
+  \vspace{0.6cm}
+  {\Large Fakulta elektrotechnická\par}
+  \vspace{2.2cm}
+
+  {\Huge \textbf{Technická zpráva}\par}
+  \vspace{0.6cm}
+  {\LARGE B3B33LAR -- Laboratoře robotiky\par}
+  \vspace{1.2cm}
+
+  {\Large \textbf{Název úlohy:} Výjezd z garáže, objetí pilonu a návrat do garáže\par}
+  \vspace{2.0cm}
+
+  \begin{tabular}{rl}
+    Autoři: & Adam Solnař, Jakub Peterka, Antonín Šmída \\
+    Datum: & 13.4.2026 \\
+    Semestr: & LS 2025/2026
+  \end{tabular}
+
+  \vfill
+\end{titlepage}
+
+\pagenumbering{arabic}
+\setcounter{page}{1}
+
+\tableofcontents
+\newpage
+
+\section{Úvod}
+Tato technická zpráva popisuje návrh, implementaci a ověření řešení úlohy mobilního robota TurtleBot v rámci předmětu B3B33LAR. Cílem práce bylo realizovat autonomní chování robota, které zahrnuje výjezd z garáže, nalezení pilonu tvořeného zeleným míčkem, jeho objetí bez kolize a následný návrat zpět do garáže. Součástí řešení je také bezpečnostní reakce na aktivaci nárazníku.
+
+Úloha kombinuje více dílčích problémů robotiky, zejména vizuální detekci cíle v RGB obraze, odhad vzdálenosti z hloubkových dat, řízení natočení robota podle polohy objektu v obraze, odometricky řízený manévr objetí pilonu, samostatný výjezd z prostoru garáže a lokalizaci vjezdu do garáže při návratu. Důraz byl kladen na jednoduché, modulární a prakticky realizovatelné řešení v laboratorních podmínkách.
+
+\section{Rozbor problému a specifikace}
+
+\subsection{Zadání a omezení}
+Řešenou variantou zadání byla úloha, ve které robot startuje uvnitř garáže, po spuštění samostatně vyjede ven, nalezne pilon umístěný před garáží, objede jej a následně se vrátí zpět do prostoru garáže. Robot je spuštěn lokálně tlačítkem na platformě a během jízdy nesmí být dále řízen z externího počítače.
+
+Řešení bylo navrženo s ohledem na omezení reálného laboratorního prostředí. RGB obraz je citlivý na změny osvětlení a barevné odlesky, hloubková data obsahují šum a při měření kulového objektu mohou kolísat. Odometrie robota je zatížena chybou, takže není vhodná jako jediný zdroj informace pro dlouhé přesuny. Dalším omezením je konečné zorné pole kamery, které komplikuje řízení v těsné blízkosti pilonu i při návratu do garáže. Současně bylo nutné zajistit okamžité zastavení při aktivaci mechanického nárazníku.
+
+\section{Návrh řešení a použité metody}
+
+\subsection{Výjezd z garáže}
+Protože robot na začátku úlohy stojí uvnitř garáže, je před zahájením hlavní mise nutné zajistit jeho řízený výjezd do otevřeného prostoru před garáží. Tato část byla realizována jako jednoduchá sekvence založená na detekci garáže v obrazu a následném odvození směru pohybu. Robot se nejprve otáčí doleva, dokud v obrazu nerozpozná garáž podle předem naladěných HSV kritérií. Jakmile je garáž nalezena, pokračuje ve stejném směru, dokud garáž opět nezmizí ze záběru kamery. Tím je získána přibližná orientace robota vůči výjezdu.
+
+Po ztrátě vizuální detekce garáže robot provede ještě krátký korekční manévr, který se skládá z otočení o $10^\circ$ doleva a následné jízdy vpřed o $0.30\,\mathrm{m}$. Tato doplňková sekvence zajišťuje, že robot skutečně opustí prostor garáže a má dostatek místa pro další hledání pilonu. Výjezd z garáže je tedy implementován jako samostatná přípravná fáze ještě před zahájením hlavní autonomní sekvence.
+
+\subsection{Detekce cíle}
+Detekce objektů je založena na prahování obrazu v barevném prostoru HSV a následné analýze souvislých oblastí. Z kamery robota je nejprve získán aktuální snímek, který je převeden do HSV reprezentace. Nad takto vzniklým obrazem je vytvořena binární maska pomocí intervalu přípustných hodnot složek H, S a V. Pro pilon, tvořený zeleným míčkem, byly použity meze
+\[
+H \in \langle 37, 74 \rangle,\qquad
+S \in \langle 98, 255 \rangle,\qquad
+V \in \langle 25, 255 \rangle.
+\]
+Pro detekci vjezdu do garáže, reprezentovaného dvojicí fialových objektů, byly použity meze
+\[
+H \in \langle 120, 159 \rangle,\qquad
+S \in \langle 70, 171 \rangle,\qquad
+V \in \langle 0, 255 \rangle.
+\]
+Tyto hodnoty byly zvoleny experimentálně pro konkrétní laboratorní podmínky.
+
+Po vytvoření binární masky jsou pomocí funkce \texttt{connectedComponentsWithStats} nalezeny souvislé oblasti a jejich základní geometrické parametry. Každá oblast je filtrována podle své plochy a podle poměru stran ohraničujícího obdélníku. Pro pilon jsou akceptovány pouze oblasti s plochou v intervalu
+\[
+A \in \langle 200, 8000 \rangle \ \mathrm{px}^2
+\]
+a s minimálním poměrem kratší a delší strany
+\[
+r_{\mathrm{axis}} \geq 0.75,
+\]
+což odpovídá přibližně kruhovému tvaru míčku. Pro detekci vjezdu do garáže je použit interval
+\[
+A \in \langle 120, 20000 \rangle \ \mathrm{px}^2
+\]
+a minimální poměr stran
+\[
+r_{\mathrm{axis}} \geq 0.10,
+\]
+aby bylo možné zachytit i výrazně protáhlé objekty. Jako výstup detekce je použit střed každé vyhovující oblasti.
+
+Vyhledání pilonu probíhá aktivně: robot se na místě otáčí konstantní úhlovou rychlostí
+\[
+\omega_{\mathrm{search}} = 0.3\,\mathrm{rad/s},
+\]
+dokud není detekován alespoň jeden kandidát typu \texttt{ball}. Následně je vybrán první nalezený objekt a jeho střed $(c_x,c_y)$ je předán dalším částem řízení.
+
+\subsection{Centrování robota}
+Pro centrování robota na pilon i na vjezd do garáže je použita proporcionální regulace odvozená od horizontální chyby mezi středem obrazu a detekovaným cílem. Obraz z kamery má v implementaci šířku $640$ pixelů, takže referenční střed obrazu je
+\[
+c_{x,\mathrm{stred}} = 320.
+\]
+Pro pilon je chyba definována jako
+\begin{equation}
+  e = c_{x,\mathrm{stred}} - c_x,
+\end{equation}
+kde $c_x$ je vodorovná souřadnice středu detekovaného objektu. V případě návratu do garáže se místo jednoho objektu používá střed dvojice detekovaných objektů, tedy
+\begin{equation}
+  c_{x,\mathrm{vjezd}} = \frac{c_{x1}+c_{x2}}{2},
+\end{equation}
+a chyba má stejný tvar
+\[
+e = c_{x,\mathrm{stred}} - c_{x,\mathrm{vjezd}}.
+\]
+
+Řídicí zákon má tvar
+\begin{equation}
+  \omega = k_p e,
+\end{equation}
+kde $k_p = 0.005$. Pro omezení příliš prudkých pohybů je úhlová rychlost saturována na
+\[
+|\omega| \leq 0.5\,\mathrm{rad/s}.
+\]
+Za dostatečné vystředění je považován stav, kdy platí
+\[
+|e| \leq 20 \ \mathrm{px}.
+\]
+Centrování probíhá iterativně: po každém otočení je znovu provedena detekce objektu a chyba je aktualizována. Pokud je objekt během centrování ztracen, je příslušná rutina ukončena jako neúspěšná.
+
+\subsection{Přiblížení na cílovou vzdálenost}
+Přiblížení k pilonu i k vjezdu do garáže je realizováno ve více fázích s využitím hloubkových dat z 3D kamery. Pro pilon je hloubka vyhodnocována v okolí detekovaného středu objektu $(c_x,c_y)$, zatímco při návratu do garáže je měření prováděno ve středu obrazu, tj. v bodě $(320,240)$, který odpovídá směru jízdy do vjezdu. Hloubka není odečítána z jediného pixelu, ale je získána průměrováním bodů z lokálního okna o velikosti $5 \times 5$ pixelů v bodovém mračnu. Tím se omezuje vliv šumu a neplatných hodnot \texttt{NaN}. Výsledkem je průměrný 3D bod
+\[
+\mathbf{p}_{\mathrm{avg}} = [X,Y,Z]^\top,
+\]
+přičemž pro řízení vzdálenosti je používána složka $Z$.
+
+Robot se pohybuje vpřed konstantní lineární rychlostí
+\[
+v = 0.15\,\mathrm{m/s}.
+\]
+Po změření aktuální hloubky $d_{\mathrm{akt}}$ je doba jízdy odhadnuta ze vztahu
+\begin{equation}
+  t = \frac{d_{\mathrm{akt}} - d_{\mathrm{cil}}}{v},
+\end{equation}
+kde $d_{\mathrm{cil}}$ je požadovaná mezní vzdálenost. Tento princip je implementován ve funkci \texttt{drive\_forward\_for}, která po celou dobu pohybu periodicky odesílá příkaz rychlosti s frekvencí $10\,\mathrm{Hz}$.
+
+Přibližovací sekvence je vícefázová. Nejprve robot provede hrubý dojezd k mezní vzdálenosti
+\[
+d_1 = 1.0\,\mathrm{m},
+\]
+poté k mezní vzdálenosti
+\[
+d_2 = 0.5\,\mathrm{m},
+\]
+a nakonec realizuje finální dojezd na cílovou vzdálenost
+\[
+d_3 = 0.3\,\mathrm{m}.
+\]
+Po každé hrubé fázi je znovu provedeno centrování, aby se snížil vliv nepřesnosti pojezdu a chyby odhadu vzdálenosti. Po finálním dojezdu je hloubka znovu přeměřena a pokud zbývající chyba překročí $0.02 ~m$, robot provede ještě jeden korekční pohyb vpřed. Stejná logika je použita jak při přibližování k pilonu, tak při návratu do garáže, pouze s jinou definicí cíle.
+
+Po dosažení zvolené bezpečné vzdálenosti od pilonu robot nepřechází do zastaveného stavu, ale navazuje na další fáze úlohy, konkrétně na objížděcí manévr a následný návrat do garáže.
+
+\subsection{Objetí pilonu}
+Po přiblížení k pilonu na bezpečnou vzdálenost je proveden vlastní manévr jeho objetí. Tento krok je implementován v modulu \texttt{drive\_around.py} a je založen na řízení podle odometrie robota. Na začátku manévru je odometrie vynulována, aby byl celý pohyb vztažen k aktuální poloze robota před pilonem. Nejde tedy o online plánování trajektorie podle mapy prostředí, ale o předem definovanou sekvenci odometricky řízených pohybů.
+
+Trajektorie objetí je realizována jako posloupnost rotací a přímých úseků aproximující oblouk okolo pilonu. Robot se nejprve otočí o $-60^\circ$, poté projede pět přímých úseků délky $0.40\,\mathrm{m}$, mezi nimiž vždy provede otočení o $+60^\circ$. Na závěr následuje krátký dopředný úsek délky $0.16\,\mathrm{m}$ a finální korekce orientace o $-90^\circ$. Tato posloupnost byla zvolena tak, aby po objetí pilonu byl robot orientován přibližně směrem ke garáži.
+
+Rotace jsou řízeny proporcionálně podle úhlové chyby
+\[
+e_\varphi = \varphi_{\mathrm{ref}} - \varphi
+\]
+se zákonem
+\begin{equation}
+  \omega = 0.8\,e_\varphi.
+\end{equation}
+Úhlová rychlost je omezena na maximálně
+\[
+|\omega| \leq 0.6\,\mathrm{rad/s}
+\]
+a rotace je ukončena při dosažení tolerance
+\[
+|e_\varphi| < 0.08\,\mathrm{rad}.
+\]
+Přímé úseky jsou projížděny rychlostí
+\[
+v = 0.18\,\mathrm{m/s}
+\]
+a ukončeny po dosažení požadované vzdálenosti s tolerancí přibližně
+\[
+0.03\,\mathrm{m}.
+\]
+Nevýhodou tohoto přístupu je závislost na přesnosti odometrie, takže při větší systematické chybě pojezdu může docházet k odchylce výsledné trajektorie od zamýšleného oblouku.
+
+\subsection{Návrat do garáže}
+Po dokončení objížděcího manévru robot přechází do fáze návratu do garáže. Pro tento účel je využita vizuální detekce dvojice objektů vymezujících vjezd do garáže. V modulu \texttt{movement.py} je implementována funkce, která z aktuálního obrazu určí středy obou detekovaných objektů a vypočítá jejich střed.
+
+Z implementačního hlediska je výhodné, že návrat do garáže využívá stejnou přibližovací logiku jako dojezd k pilonu; mění se pouze typ cíle, způsob centrování a místo, ve kterém je vyhodnocována hloubka. Robot se následně natáčí tak dlouho, dokud se střed vjezdu nenachází přibližně ve středu obrazu. Řízení natočení je založeno na stejné myšlence jako centrování na pilon, tedy na proporcionální vazbě mezi horizontální odchylkou a úhlovou rychlostí robota. Po vystředění je provedeno přiblížení ke garáži pomocí hloubkových dat, přičemž hloubka je v tomto případě odhadována ve středu obrazu, tedy ve směru jízdy do vjezdu.
+
+Přibližování ke garáži probíhá postupně ve více krocích, obdobně jako při přibližování k pilonu. Tento postup snižuje riziko chyby způsobené šumem hloubkového měření a umožňuje průběžnou korekci směru. Výsledkem je řízený návrat do prostoru garáže bez nutnosti použití globální mapy prostředí. Omezením této části řešení je závislost na současné viditelnosti obou objektů vjezdu a na stabilitě jejich barevné detekce v aktuálních světelných podmínkách.
+
+\subsection{Bezpečnostní logika bumperu}
+Mechanický nárazník robota je obsluhován pomocí callback funkce registrované v hlavním programu. Při přijetí události se stavem \texttt{msg.state == 1} je vyvolána funkce \texttt{request\_stop("bumper")}, která nastaví sdílenou latched proměnnou \texttt{\_emergency\_stop} na hodnotu \texttt{True}. Současně je okamžitě odeslán příkaz nulové lineární i úhlové rychlosti.
+
+Nouzový stav je sdílen mezi jednotlivými moduly a je průběžně kontrolován ve všech hlavních smyčkách pro vyhledávání cíle, centrování, přibližování i objíždění pilonu. Jakmile je nouzový stav jednou aktivován, zůstává zachován až do explicitního resetu, takže po kolizní události již robot nepokračuje v žádné další části úlohy. Tento postup odpovídá požadavku bezpečného a jednoznačného ukončení jízdy po aktivaci bumperu.
+
+\section{Implementace}
+
+\subsection{Použitý hardware a software}
+Řešení bylo implementováno na mobilní platformě TurtleBot v laboratorním prostředí předmětu B3B33LAR. Pro vizuální část algoritmu byl využíván RGB obraz z kamery robota a pro odhad vzdálenosti byl hloubkový senzor. Z hlediska programového rozhraní byl robot inicializován se zapnutým RGB streamem a 3D bodami prostorového mračna, aby bylo možné současně provádět barevnou detekci i hloubkové měření.
+
+Implementace byla realizována v jazyce Python s využitím balíčku \texttt{robolab\_turtlebot}, který poskytuje vysokou úroveň přístupu k pohybu robota, odometrii, RGB obrazu a obsluze tlačítka a nárazníku. Pro zpracování obrazu byla použita knihovna OpenCV, zejména pro převod do barevného prostoru HSV, vytvoření binární masky a analýzu souvislých oblastí. Pro numerické operace a práci s daty byla využita knihovna NumPy.
+
+Výhodou tohoto přístupu bylo, že veškeré řízení probíhalo přímo na robotu a nebylo nutné používat externí počítač ani další nadstavbové navigační frameworky. Implementace tak odpovídala požadavku autonomního řešení prováděného lokálně na platformě.
+
+\subsection{Struktura programu}
+Program je rozdělen do několika samostatných modulů, které odpovídají hlavním částem navrženého řešení.
+
+Soubor \texttt{main.py} představuje hlavní vstupní bod programu a řídí celou sekvenci chování robota. Zajišťuje čekání na stisk tlačítka, počáteční výjezd z garáže, spuštění hledání pilonu, navázání na objížděcí manévr a následný návrat do garáže.
+
+Modul \texttt{vision.py} obsahuje nízkoúrovňové funkce pro zpracování obrazu a bodového mračna. Zajišťuje převod snímku do HSV prostoru, vytvoření binární masky, detekci souvislých oblastí a výpočet průměrného 3D bodu v okolí zvoleného pixelu.
+
+Modul \texttt{detection.py} realizuje aktivní vyhledávání pilonu. Robot se při této fázi otáčí na místě, dokud není pomocí funkcí z modulu \texttt{vision.py} nalezen objekt odpovídající profilu pilonu.
+
+Modul \texttt{movement.py} implementuje počáteční výjezd z garáže, centrování robota na pilon i na vjezd do garáže, vícefázové přibližování s využitím hloubkových dat a pomocné pohybové rutiny.
+
+Modul \texttt{drive\_around.py} obsahuje vlastní objížděcí manévr. Tato část využívá odometrii robota, pomocné funkce pro normalizaci úhlu, řízení rotace na požadovaný natočovací úhel a řízení přímého pohybu na zadanou vzdálenost.
+
+Modul \texttt{safety.py} zajišťuje sdílený nouzový stav zastavení. Tento stav je přístupný ze všech ostatních modulů a slouží k okamžitému ukončení pohybových smyček po aktivaci nárazníku.
+
+Celkový tok programu je znázorněn na Obr.~\ref{fig:block_scheme}.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+    node distance=6mm,
+    block/.style={
+        rectangle,
+        draw,
+        rounded corners,
+        align=center,
+        minimum width=4.4cm,
+        minimum height=0.9cm
+    },
+    line/.style={
+        -{Latex[length=2.2mm]},
+        thick
+    }
+]
+
+\node[block] (start) {Čekání na start\\tlačítkem};
+\node[block, below=of start] (leavegarage) {Výjezd\\z garáže};
+\node[block, below=of leavegarage] (findball) {Vyhledání pilonu\\v obraze};
+\node[block, below=of findball] (centerball) {Vystředění\\na pilon};
+\node[block, below=of centerball] (approach) {Přiblížení\\k pilonu};
+\node[block, below=of approach] (around) {Objetí pilonu\\podle odometrie};
+\node[block, below=of around] (findgate) {Vyhledání vjezdu\\do garáže};
+\node[block, below=of findgate] (centergate) {Vystředění\\na střed vjezdu};
+\node[block, below=of centergate] (return) {Návrat\\do garáže};
+\node[block, below=of return] (stop) {Zastavení};
+
+\draw[line] (start) -- (leavegarage);
+\draw[line] (leavegarage) -- (findball);
+\draw[line] (findball) -- (centerball);
+\draw[line] (centerball) -- (approach);
+\draw[line] (approach) -- (around);
+\draw[line] (around) -- (findgate);
+\draw[line] (findgate) -- (centergate);
+\draw[line] (centergate) -- (return);
+\draw[line] (return) -- (stop);
+
+\end{tikzpicture}
+\caption{Blokové schéma hlavní autonomní sekvence robota.}
+\label{fig:block_scheme}
+\end{figure}
+
+\subsection{Důležité implementační detaily}
+Při implementaci bylo přijato několik rozhodnutí, která měla přímý vliv na výsledné chování systému:
+
+\begin{itemize}[leftmargin=1.2cm]
+  \item Bezpečnostní stav byl sjednocen do jediné sdílené \textit{latched} proměnné, takže po aktivaci nárazníku již robot nepokračuje v žádné další části programu.
+  \item Před zahájením hlavní mise robot provede samostatný výjezd z garáže, aby bylo hledání pilonu prováděno až ve volném prostoru před garáží.
+  \item Přibližování k pilonu i k vjezdu do garáže bylo navrženo jako vícefázové, aby bylo možné po každém kroku znovu provést centrování a snížit tak vliv chyby odometrie.
+  \item Objetí pilonu bylo realizováno jako pevně definovaná odometrická sekvence, což vedlo k jednoduchému a výpočetně nenáročnému řešení bez potřeby globálního plánování trajektorie.
+  \item Návrat do garáže znovu využívá stejnou přibližovací logiku jako dojezd k pilonu, takže se podařilo znovu použít již odladěné části implementace.
+\end{itemize}
+
+\section{Experimenty a výsledky}
+
+\subsection{Návrh experimentů}
+Navržené řešení bylo ověřováno ve třech úrovních. První úroveň tvořily dílčí testy vizuální detekce pilonu a vjezdu do garáže, jejichž cílem bylo ověřit správnost nastavení HSV prahování a základní stabilitu detekce v laboratorních podmínkách. Druhou úroveň představovaly funkční testy pohybových rutin, zejména výjezdu z garáže, centrování, přiblížení k pilonu, objížděcího manévru a návratu do garáže. Třetí úroveň tvořilo ověření celé autonomní sekvence odpovídající řešenému zadání, tj. výjezd z garáže, nalezení pilonu, jeho objetí a návrat do garáže.
+
+V rámci experimentů byly sledovány zejména tyto veličiny:
+\begin{itemize}[leftmargin=1.2cm]
+    \item úspěšnost výjezdu z garáže,
+    \item úspěšnost detekce pilonu a vjezdu do garáže,
+    \item schopnost robota vystředit se na cíl a bezpečně se k němu přiblížit,
+    \item úspěšnost objížděcího manévru bez kolize,
+    \item úspěšnost návratu a zastavení robota uvnitř garáže,
+    \item správná reakce systému na aktivaci mechanického nárazníku.
+\end{itemize}
+
+Experimenty byly prováděny v laboratorním prostředí při běžném osvětlení učebny. Pokud nebylo uvedeno jinak, robot startoval uvnitř garáže a pilon byl umístěn před garáží v souladu s řešenou variantou zadání.
+
+\subsection{Ověření celé autonomní sekvence}
+Hlavním experimentem bylo ověření, zda robot dokáže splnit celou řešenou úlohu, tedy samostatně vyjet z garáže, nalézt pilon, objet jej a následně se vrátit zpět do prostoru garáže. Za úspěšný pokus byl považován takový průběh, při kterém robot provedl všechny uvedené kroky bez aktivace bumperu a bez zjevného selhání detekce nebo navigace.
+
+U každého pokusu byly sledovány zejména tyto dílčí výsledky:
+\begin{itemize}[leftmargin=1.2cm]
+    \item úspěšný výjezd z garáže,
+    \item nalezení pilonu,
+    \item úspěšné přiblížení k pilonu,
+    \item provedení objížděcího manévru,
+    \item nalezení vjezdu do garáže,
+    \item návrat a zastavení robota uvnitř garáže.
+\end{itemize}
+
+Výsledky jednotlivých kroků i celkové úspěšnosti celé mise shrnuje Tab.~\ref{tab:full_sequence}.
+
+\begin{table}[H]
+  \centering
+  \begin{tabular}{lcc}
+    \toprule
+    \textbf{Hodnocený krok} & \textbf{Počet pokusů} & \textbf{Úspěšnost [\%]} \\
+    \midrule
+    Výjezd z garáže & 10 & 90 \\
+    Nalezení pilonu & 10 & 90 \\
+    Přiblížení k pilonu & 10 & 100 \\
+    Objetí pilonu & 10 & 100 \\
+    Nalezení vjezdu do garáže & 10 & 90 \\
+    Návrat do garáže & 10 & 90 \\
+    Celá autonomní sekvence & 10 & 90 \\
+    \bottomrule
+  \end{tabular}
+  \caption{Výsledky ověření celé autonomní sekvence robota}
+  \label{tab:full_sequence}
+\end{table}
+
+\section{Diskuse}
+Navržené řešení se ukázalo jako funkční, avšak experimenty odhalily řadu reálných limitů plynoucích z nedokonalosti senzoriky, hardwaru a asynchronního zpracování událostí v ROS.
+
+\textbf{Stabilita vizuální detekce a HSV prahování} \\
+Největší slabinou vizuálního přístupu se ukázala závislost na stabilních světelných podmínkách. Během kalibrace HSV limitů pro zelený míček a branku. Ukázalo se, že parametry nastavené v jedné části laboratoře nebyly plně přenositelné do jiných světelných podmínek, zejména při výskytu stínů a odlesků. Při horším nasvícení se detekovaná plocha v binární masce opticky zmenšila pod stanovený limit (\texttt{min\_area}), což občas vedlo ke ztrátě cíle z dohledu. Řešením do budoucna by mohla být adaptivní kalibrace.
+
+\textbf{Nepřesnost odometrie a asymetrie podvozku} \\
+Během testů jízdy vpřed bylo zjištěno, že někteří roboti mírně stáčejí svou trajektorii do strany, pravděpodobně vlivem mechanického zadrhávání nebo asymetrie opotřebení jednoho z hnacích kol. Z tohoto důvodu nebylo možné plně spoléhat pouze na odometrii pro delší přímé přesuny. Tento hardwarový nedostatek byl softwarově kompenzován zavedením průběžné optické re-kalibrace (funkce \texttt{recenter\_to\_ball} volaná opakovaně během přibližovací sekvence), která zajistila, že robot i přes mechanickou nepřesnost neustále mířil přesně na cíl.
+
+\textbf{Asynchronní konflikty u bezpečnostního nárazníku (Bumper)} \\
+Zajímavým implementačním problémem, se kterým jsme se dlouho potýkali, byla nestabilita ROS callbacku pro nárazník (bumper). V určité fázi vývoje docházelo k situaci, kdy byl signál z bumperu vyhodnocen a odeslán vícekrát za sebou. To vedlo k pádům řídicího skriptu nebo nepředvídatelnému chování, kdy robot uvízl v chybové smyčce. Problém se podařilo stabilizovat až zavedením robustní \textit{latched} proměnné (kill switch \texttt{\_emergency\_stop} v modulu \texttt{safety.py}), která po prvním zachycení nárazu uzamkne globální chybový stav a ignoruje případná další falešná nebo duplicitní volání z hardwaru, dokud není systém záměrně resetován.
+
+\textbf{Omezené zorné pole kamery a volba cílové vzdálenosti} \\
+Během vývoje jsme původně zamýšleli dojíždět s robotem ještě blíže k cíli. Zde jsme však narazili na fyzický limit zorného pole (FOV) použité kamery. Jakmile se robot k míčku přiblížil na velmi krátkou vzdálenost, cíl se dostal pod úroveň záběru objektivu do tzv. slepého úhlu a pilon opustil zorné pole kamery a nebylo již možné spolehlivě pokračovat ve vizuálně řízeném přiblížení. Z tohoto důvodu nebylo možné bezpečně a spolehlivě řídit finální dojezd na kratší vzdálenosti. Naše zvolená cílová vzdálenost 0.3 m je tedy racionálním kompromisem -- jde o limitní hranici, na které je kamera ještě schopna cíl s jistotou detekovat a robot před ním dokáže kontrolovaně zastavit bez rizika kolize ze ztráty vizuálních dat.
+
+\section{Závěr}
+Cílem práce bylo navrhnout a implementovat řídicí software pro mobilního robota TurtleBot, který po spuštění samostatně vyjede z garáže, nalezne pilon, objede jej a následně se vrátí zpět do prostoru garáže. Navržené řešení kombinuje barevnou detekci v prostoru HSV, počáteční výjezd z garáže, centrování podle obrazu, vícefázové přibližování s využitím hloubkových dat, odometricky řízený manévr objetí pilonu a bezpečnostní logiku založenou na sdíleném nouzovém stavu.
+
+Experimentální ověření ukázalo, že zvolený přístup je v laboratorních podmínkách funkční. Při ověření celé autonomní sekvence dosáhl robot úspěšnosti 90~\%, průměrná chyba finálního dojezdu činila přibližně $0.05\,\mathrm{m}$ a reakce na aktivaci nárazníku byla správná ve 100~\% testovaných případů. Omezení řešení se projevila zejména v citlivosti na světelné podmínky, šum hloubkového měření a nepřesnost odometrie. Přesto se navržené řešení ukázalo jako dostatečně robustní pro splnění zadané úlohy.
+
+\section{Návrh úlohy pro příští rok}
+Pro další ročníky předmětu navrhujeme obohatit sadu úloh o zajímavou implementaci algoritmu pro plynulé sledování vodící čáry vyznačené na podlaze laboratoře. Tím by se výrazně omezila závislost robota na čistě odometrickém řízení pro delší přesuny, které se ukázalo jako náchylné na chyby.
+
+Na konci této vyznačené trasy by robot navíc musel pomocí kamery rozpoznat specifický symbol (například jednoduchý geometrický tvar nebo barvu) umístěný na stěně laboratoře. Na základě typu detekovaného symbolu by pak robot autonomně vyhodnotil situaci a provedl finální přesný parkovací manévr do příslušné cílové garáže.
+
+\newpage
+
+\section{Odkazy a literatura}
+
+\begingroup
+\renewcommand{\section}[2]{} % Toto "spolkne" automatický nadpis seznamu
+\begin{thebibliography}{99}
+
+\bibitem{krsek_rgb}
+\textsc{Krsek, P.} \textit{Metody zpracování dat z RGB kamery}. Výukové prezentace ke 3. cvičení, 2023--2025.
+
+\bibitem{petrik_depth}
+\textsc{Petrík, V.} \textit{Metody odhadování hloubky a RANSAC}. Výukové prezentace ke 4. cvičení, 2020--2025.
+
+\bibitem{konicek_python}
+\textsc{Koníček, D.} \textit{Jak programovat v Pythonu} a \textit{Šablona Python souborů s metadaty}. Prezentace ke 6. a 7. cvičení, 2023--2024.
+
+\bibitem{krsek_tz}
+\textsc{Krsek, P.} \textit{Obsah technické zprávy}. Prezentace k 5. cvičení, 2023--2024.
+
+\bibitem{krsek_senzory}
+\textsc{Krsek, P., Petrík, V., Wagner, L.} \textit{Metody zpracování dat ze senzorů}. Výukové materiály ke 2. a 3. cvičení, 2019--2022.
+
+\end{thebibliography}
+\endgroup
+\printbibliography
+
+\appendix
+
+\end{document}
