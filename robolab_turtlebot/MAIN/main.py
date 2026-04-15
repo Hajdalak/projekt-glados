@@ -187,6 +187,8 @@ def main():
 
     try:
         # Wait for the manual start signal.
+        escape_from_box(turtle)
+
         wait_for_button()
 
         # Find and approach the ball.
