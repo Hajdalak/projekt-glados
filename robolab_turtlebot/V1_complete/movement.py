@@ -322,5 +322,3 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
     else:
         print("Sekvence jizdy dokoncena.")
 
-def mov_start(turtle):
-    
