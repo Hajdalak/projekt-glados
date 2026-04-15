@@ -227,8 +227,8 @@ def rotate_left_10deg_and_drive_30cm(turtle, stop_requested=None):
     ok = drive_around.rotate_by(
         turtle,
         rate,
-        delta_rad=math.radians(10.0),
-        w=0.25,
+        delta_rad=math.radians(12.0),
+        w=0.2,
         stop_requested=stop_requested,
     )
     if not ok:

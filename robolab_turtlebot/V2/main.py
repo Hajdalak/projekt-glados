@@ -155,10 +155,10 @@ def main():
         drive_around.drive_around(turtle, stop_requested=safety.is_stop_requested)
 
         # Re-center and drive to the gate.
-        abort_if_needed()
-        ok = gate_go()
-        if not ok:
-            return
+        # abort_if_needed()
+        # ok = gate_go()
+        # if not ok:
+        #     return
 
     finally:
         # Always send a final zero command before exiting.
