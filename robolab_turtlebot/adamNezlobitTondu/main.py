@@ -6,6 +6,7 @@ import detection
 import movement
 import drive_around
 import safety
+import vision
 
 # Create the main robot instance used by the whole program flow.
 turtle = Turtlebot(rgb=True, pc=True)
@@ -109,6 +110,28 @@ def wait_for_button():
 
     abort_if_needed()
 
+def turn_away_from_garage(turtle, stop_requested=None, search_angular_speed=0.3):
+    """Rotate left until the yellow garage is no longer visible."""
+    print("Otacim se doleva, dokud nezmizi garaz...")
+    
+    # Prvotni detekce garaze
+    objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='garage')
+    
+    # Kladna uhlova rychlost toci robota doleva.
+    # Cyklus bezi, dokud vidime aspon jeden objekt garaze.
+    while len(objects) > 0 and not safety._should_stop(stop_requested):
+        turtle.cmd_velocity(linear=0.0, angular=search_angular_speed)
+        objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='garage')
+        
+    # Zastaveni rotace po zmizeni zlute barvy ze zaberu kamery
+    turtle.cmd_velocity(0.0, 0.0)
+    
+    if safety._should_stop(stop_requested):
+        print("Otaceni preruseno: byl pozadovan stop.")
+        return False
+        
+    print("Garaz zmizela z dohledu, zastavuji rotaci.")
+    return True
 
 def main():
     """Robot entrypoint."""
@@ -116,6 +139,12 @@ def main():
     turtle.register_bumper_event_cb(bumper_callback)
 
     try:
+
+
+        abort_if_needed()
+        ok_garage = turn_away_from_garage(turtle, stop_requested=safety.is_stop_requested)
+        if not ok_garage:
+            return
         # Wait for the manual start signal.
         wait_for_button()
 
