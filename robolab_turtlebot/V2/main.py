@@ -116,13 +116,22 @@ def main():
     turtle.register_bumper_event_cb(bumper_callback)
 
     try:
-
         found_garage = movement.find_garage_by_turning_left(
-        turtle,
-        stop_requested=safety.is_stop_requested)
+            turtle,
+            stop_requested=safety.is_stop_requested,
+        )
 
         if not found_garage:
             print("Garaz se nepodarilo najit.")
+            return
+
+        lost_garage = movement.lose_garage_by_turning_left(
+            turtle,
+            stop_requested=safety.is_stop_requested,
+        )
+
+        if not lost_garage:
+            print("Garaz se nepodarilo nechat zmizet ze zaberu.")
             return
         
         # Wait for the manual start signal.

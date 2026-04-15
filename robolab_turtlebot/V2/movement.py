@@ -170,6 +170,50 @@ def find_garage_by_turning_left(turtle, search_angular_speed=0.3, stop_requested
     return True
 
 
+def lose_garage_by_turning_left(
+    turtle,
+    search_angular_speed=0.3,
+    consecutive_missing_frames=3,
+    stop_requested=None,
+):
+    """Keep turning left until the garage disappears and return whether it was lost."""
+    if should_stop(stop_requested):
+        print("Otaceni za garaz preskoceno: byl pozadovan stop.")
+        return False
+
+    print("Otacim se doleva, dokud garaz nezmizí ze zaberu...")
+    rate = Rate(10)
+    missing_frames = 0
+    objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='garage')
+
+    if len(objects) == 0:
+        print("Garaz uz neni v zaberu.")
+        return True
+
+    while missing_frames < consecutive_missing_frames and not should_stop(stop_requested):
+        turtle.cmd_velocity(linear=0.0, angular=abs(search_angular_speed))
+        rate.sleep()
+        objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='garage')
+
+        if len(objects) == 0:
+            missing_frames += 1
+        else:
+            missing_frames = 0
+
+    turtle.cmd_velocity(0.0, 0.0)
+
+    if should_stop(stop_requested):
+        print("Otaceni za garaz preruseno: byl pozadovan stop.")
+        return False
+
+    if missing_frames < consecutive_missing_frames:
+        print("Garaz nezmizela ze zaberu.")
+        return False
+
+    print("Garaz zmizela ze zaberu.")
+    return True
+
+
 def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop_requested=None):
     """
     Helper function: measure distance, drive to a target boundary, and re-center.
