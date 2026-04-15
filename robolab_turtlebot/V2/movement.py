@@ -185,6 +185,7 @@ def lose_garage_by_turning_left(
 
     print("Otacim se doleva, dokud garaz nezmizí ze zaberu...")
     rate = Rate(10)
+    # Require several missed detections in a row to avoid stopping on one noisy frame.
     missing_frames = 0
     objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='garage')
 

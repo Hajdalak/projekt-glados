@@ -20,14 +20,14 @@ DEFAULTS = {
 	'max_s': 255,
 	'min_v': 72,
 	'max_v': 255,
-	'min_area': 20000,
-	'max_area': 280000,
+	'min_area': 200,
+	'max_area': 10000,
 	'kernel_size': 5,
 	'morph_on': 1,
 }
 
 
-AREA_TRACKBAR_MAX = 307200
+AREA_TRACKBAR_MAX = 10000
 
 
 def _noop(_):

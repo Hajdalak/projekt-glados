@@ -5,6 +5,7 @@ import safety
 
 
 RESET_ODOMETRY_TIMEOUT_SEC = 2.0
+# Odometry reset is asynchronous, so accept a small residual offset instead of exact zeros.
 RESET_ODOMETRY_POSITION_TOL_M = 0.03
 RESET_ODOMETRY_ANGLE_TOL_RAD = 0.08
 
