@@ -28,9 +28,9 @@ GATE_MAX_V = 255
 
 # Yellow garage HSV profile.
 # These values are only a starting point and may need tuning in lab lighting.
-GARAGE_MIN_H = 20
-GARAGE_MAX_H = 100
-GARAGE_MIN_S = 100
+GARAGE_MIN_H = 23
+GARAGE_MAX_H = 63
+GARAGE_MIN_S = 120
 GARAGE_MAX_S = 255
 GARAGE_MIN_V = 70
 GARAGE_MAX_V = 255
