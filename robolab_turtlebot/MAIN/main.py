@@ -42,7 +42,6 @@ def escape_from_garage(turtle, garage_radius_m=1.0, escape_dist_m=1.5, stop_requ
     Matematicky jednoduse najde stred tohoto volneho prostoru a vyjede ven.
     """
     print("Skenuji okoli pro nalezeni vychodu z garaze...")
-    rate = Rate(10)
     
     open_angles = []
 
@@ -50,7 +49,6 @@ def escape_from_garage(turtle, garage_radius_m=1.0, escape_dist_m=1.5, stop_requ
     while not safety.is_stop_requested():
         if turtle.get_odometry() is not None:
             break
-        rate.sleep()
 
     # Reset odometrie pred plynulym otacenim
     turtle.reset_odometry()
@@ -58,7 +56,6 @@ def escape_from_garage(turtle, garage_radius_m=1.0, escape_dist_m=1.5, stop_requ
         x, y, a = turtle.get_odometry()
         if x == 0 and y == 0 and a == 0:
             break
-        rate.sleep()
 
     # Roztocime robota plynule
     turtle.cmd_velocity(linear=0.0, angular=0.5)
