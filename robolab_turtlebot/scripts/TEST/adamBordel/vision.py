@@ -2,6 +2,8 @@ from __future__ import print_function
 from robolab_turtlebot import Turtlebot, Rate, get_time
 import cv2
 import numpy as np
+import os
+import time
 
 turtle = Turtlebot(rgb=True)
 
@@ -16,6 +18,63 @@ BALL_MAX_V = 255
 DEFAULT_MIN_AREA = 200
 DEFAULT_MAX_AREA = 8000
 DEFAULT_AXIS_RATIO_MIN = 0.75
+
+
+def _is_display_available():
+    """Return True when an X11 display is available for OpenCV windows."""
+    display = os.environ.get("DISPLAY", "").strip()
+    if not display:
+        return False
+
+    if display.startswith(":"):
+        display_num = display[1:].split(".")[0]
+        if display_num.isdigit():
+            x11_socket = "/tmp/.X11-unix/X{}".format(display_num)
+            if not os.path.exists(x11_socket):
+                return False
+
+    return True
+
+
+def _print_display_help():
+    """Print practical steps for GUI execution when DISPLAY is unavailable."""
+    print("GUI display is not available, OpenCV windows cannot be opened.")
+    print("For windows on your computer over SSH, start an X server locally and connect with 'ssh -Y'.")
+    print("For windows on the robot's own monitor, run 'source robolab_turtlebot/scripts/set-display' on the robot first.")
+    print("Current DISPLAY='{}'".format(os.environ.get("DISPLAY", "")))
+
+
+def _show_detection_stream_headless(
+    turtle,
+    max_area=DEFAULT_MAX_AREA,
+    min_area=DEFAULT_MIN_AREA,
+    axis_tolerance=DEFAULT_AXIS_RATIO_MIN,
+    print_period_sec=1.0,
+):
+    """Run detection without GUI and print periodic status instead."""
+    _print_display_help()
+    print("Running headless detection preview instead (stop: Ctrl+C).")
+
+    last_print = 0.0
+    rate = Rate(15)
+
+    try:
+        while True:
+            object_centroids, annotated, mask = detect_objects_with_debug_frame(
+                turtle,
+                max_area=max_area,
+                min_area=min_area,
+                axis_tolerance=axis_tolerance,
+            )
+
+            now = time.time()
+            if (annotated is not None or mask is not None) and (now - last_print) >= print_period_sec:
+                print("Detected objects: {}".format(len(object_centroids)))
+                last_print = now
+
+            rate.sleep()
+    except KeyboardInterrupt:
+        print("Headless detection preview stopped by user.")
 
 def odometry(turtle):
     turtle.wait_for_odometry()
@@ -159,6 +218,14 @@ def show_detection_stream(
     axis_tolerance=DEFAULT_AXIS_RATIO_MIN,
 ):
     """Open live windows with robot RGB view and detected objects. Press q to quit."""
+    if not _is_display_available():
+        return _show_detection_stream_headless(
+            turtle,
+            max_area=max_area,
+            min_area=min_area,
+            axis_tolerance=axis_tolerance,
+        )
+
     print("Opening detection preview. Press 'q' in image window to quit.")
 
     rate = Rate(15)
@@ -171,9 +238,27 @@ def show_detection_stream(
         )
 
         if annotated is not None:
-            cv2.imshow('Robot view - detected objects', annotated)
+            try:
+                cv2.imshow('Robot view - detected objects', annotated)
+            except cv2.error as exc:
+                print("Cannot open GUI window: {}".format(exc))
+                return _show_detection_stream_headless(
+                    turtle,
+                    max_area=max_area,
+                    min_area=min_area,
+                    axis_tolerance=axis_tolerance,
+                )
         if mask is not None:
-            cv2.imshow('HSV mask', mask)
+            try:
+                cv2.imshow('HSV mask', mask)
+            except cv2.error as exc:
+                print("Cannot open GUI window: {}".format(exc))
+                return _show_detection_stream_headless(
+                    turtle,
+                    max_area=max_area,
+                    min_area=min_area,
+                    axis_tolerance=axis_tolerance,
+                )
 
         key = cv2.waitKey(1) & 0xFF
         if key == ord('q'):

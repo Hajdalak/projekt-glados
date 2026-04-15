@@ -1,15 +1,44 @@
 from __future__ import print_function
 import cv2
 import numpy as np
+import os
 from robolab_turtlebot import Turtlebot
 
 # Prázdná funkce, kterou OpenCV vyžaduje pro trackbary
 def nic(x):
     pass
 
+
+def _is_display_available():
+    """Return True when an X11 display is available for OpenCV windows."""
+    display = os.environ.get("DISPLAY", "").strip()
+    if not display:
+        return False
+
+    if display.startswith(":"):
+        display_num = display[1:].split(".")[0]
+        if display_num.isdigit():
+            x11_socket = "/tmp/.X11-unix/X{}".format(display_num)
+            if not os.path.exists(x11_socket):
+                return False
+
+    return True
+
+
+def _print_display_help():
+    """Print practical steps for GUI execution when DISPLAY is unavailable."""
+    print("GUI display is not available, so the HSV tuner cannot open OpenCV windows.")
+    print("If you want the windows on your computer over SSH, use an X server and connect with 'ssh -Y'.")
+    print("If you want the windows on the robot's own monitor, run 'source robolab_turtlebot/scripts/set-display' on the robot first.")
+    print("Current DISPLAY='{}'".format(os.environ.get("DISPLAY", "")))
+
 def main():
     print("Spoustim HSV Tuner...")
     print("Prepnuti do oken a stisknuti klavesy 'q' ukonci program.")
+
+    if not _is_display_available():
+        _print_display_help()
+        return
     
     # Inicializace robota pouze s RGB kamerou
     turtle = Turtlebot(rgb=True)
