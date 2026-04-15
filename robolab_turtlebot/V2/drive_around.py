@@ -1,7 +1,12 @@
 from __future__ import print_function
 import math
-from robolab_turtlebot import Rate
+from robolab_turtlebot import Rate, get_time
 import safety
+
+
+RESET_ODOMETRY_TIMEOUT_SEC = 2.0
+RESET_ODOMETRY_POSITION_TOL_M = 0.03
+RESET_ODOMETRY_ANGLE_TOL_RAD = 0.08
 
 
 def should_stop(stop_requested=None):
@@ -23,6 +28,19 @@ def wrap_pi(a):
 def stop(turtle):
     """Send zero linear and angular velocity."""
     turtle.cmd_velocity(0.0, 0.0)
+
+
+def _is_odometry_near_zero(odometry):
+    """Return True when odometry is close enough to the reset state."""
+    if odometry is None:
+        return False
+
+    x, y, a = odometry
+    return (
+        abs(x) <= RESET_ODOMETRY_POSITION_TOL_M
+        and abs(y) <= RESET_ODOMETRY_POSITION_TOL_M
+        and abs(a) <= RESET_ODOMETRY_ANGLE_TOL_RAD
+    )
 
 
 def rotate_by(turtle, rate, delta_rad, w=0.25, tol=0.08, stop_requested=None):
@@ -113,12 +131,28 @@ def drive_around(turtle, stop_requested=None):
     # Reset odometry so the maneuver starts from a clean reference frame.
     turtle.reset_odometry()
     wait_rate = Rate(10)
+    reset_start = get_time()
 
     # Wait until the odometry reset is reflected by the robot state.
     while not should_stop(stop_requested):
-        x, y, a = turtle.get_odometry()
-        if x == 0 and y == 0 and a == 0:
+        odometry = turtle.get_odometry()
+        if _is_odometry_near_zero(odometry):
             break
+
+        if get_time() - reset_start >= RESET_ODOMETRY_TIMEOUT_SEC:
+            if odometry is None:
+                print("Odometry reset wait timed out: odometry is unavailable, continuing with current reference.")
+            else:
+                x, y, a = odometry
+                print(
+                    "Odometry reset wait timed out at x={:.3f}, y={:.3f}, a={:.3f}; continuing anyway.".format(
+                        x,
+                        y,
+                        a,
+                    )
+                )
+            break
+
         wait_rate.sleep()
 
     if should_stop(stop_requested):
