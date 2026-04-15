@@ -7,7 +7,7 @@ import drive_around
 import safety
 
 # Create the main robot instance used by the whole program flow.
-turtle = Turtlebot(rgb=True, pc=True)
+turtle = Turtlebot(rgb=True, depth=True, pc=True)
 buttonPressed = False
 
 
