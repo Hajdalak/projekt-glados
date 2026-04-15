@@ -18,7 +18,8 @@ def get_center_depth(turtle):
     z hloubkove kamery (pomoci 2D rezu - laserscanu).
     Vraci vzdalenost v metrech. Pokud je volno/chyba, vraci nekonecno.
     """
-    scan = turtle.get_laserscan()
+    turtle.wait_for_depth_image()
+    scan = turtle.get_depth_image()
     
     # Ochrana proti prazdnym datum ze senzoru
     if scan is None or len(scan) == 0:
