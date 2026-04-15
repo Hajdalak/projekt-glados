@@ -46,7 +46,7 @@ def escape_from_box(turtle, step_deg=10, box_threshold_m=1.0, escape_dist_m=1.5,
             open_angles.append(current_angle)
 
         # Rotate to the next step
-        if not movement.rotate_by(turtle, rate, step_rad, w=0.5, stop_requested=stop_requested):
+        if not drive_around.rotate_by(turtle, rate, step_rad, w=0.5, stop_requested=stop_requested):
             return False
 
     if not open_angles:
