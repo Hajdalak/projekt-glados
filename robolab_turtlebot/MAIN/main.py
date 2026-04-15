@@ -108,12 +108,12 @@ def escape_from_garage(turtle, garage_radius_m=1.0, escape_dist_m=1.5, stop_requ
     while diff > math.pi: diff -= 2.0 * math.pi
     while diff < -math.pi: diff += 2.0 * math.pi
 
-    if not rotate_by(turtle, rate, diff, w=0.5, stop_requested=stop_requested):
+    if not rotate_by(turtle, 10, diff, w=0.5, stop_requested=stop_requested):
         return False
 
     print("Otoceno k vychodu. Vyjizdim z garaze...")
     # Vyjedeme ven (tvoje funkce z drive_around.py)
-    if not drive_straight(turtle, rate, escape_dist_m, v=0.2, stop_requested=stop_requested):
+    if not drive_straight(turtle, 10, escape_dist_m, v=0.2, stop_requested=stop_requested):
         return False
 
     print("Uspesne jsem vyjel z garaze.")
