@@ -6,45 +6,34 @@ import safety
 
 
 def should_stop(stop_requested=None):
-    """Return True when motion should stop."""
     if stop_requested is not None:
         return bool(stop_requested())
     return safety.is_stop_requested()
 
 
 def drive_forward_for(turtle, speed, duration, stop_requested=None):
-    """Drive forward for a fixed time unless stop is requested."""
     rate = Rate(10)
     t = get_time()
-
-    # Keep sending forward velocity until the requested time elapses.
     while (get_time() - t < duration) and not should_stop(stop_requested):
         turtle.cmd_velocity(linear=speed, angular=0.0)
         rate.sleep()
-
-    # Explicitly stop after the timed segment.
     turtle.cmd_velocity(0.0, 0.0)
-
     if should_stop(stop_requested):
         print("Jizda prerusena: byl pozadovan stop.")
 
 
 def recenter_between_two_objects(turtle, image_width=640, tolerance=20, kp=0.005, stop_requested=None):
-    """Center robot between two visible objects and return (mid_cx, mid_cy), or None if objects are lost."""
     if should_stop(stop_requested):
         print("Centrovani preskoceno: byl pozadovan stop.")
         return None
 
-    # Detect the two gate poles used for midpoint centering.
     objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='gate')
     if len(objects) < 2:
         print("Centrovani selhalo: Nevidim obe vezicky v obrazu.")
         return None
 
-    # Compute the initial midpoint between both detected objects.
     cx1, cy1 = float(objects[0][0]), float(objects[0][1])
     cx2, cy2 = float(objects[1][0]), float(objects[1][1])
-
     mid_cx = (cx1 + cx2) / 2.0
     mid_cy = (cy1 + cy2) / 2.0
 
@@ -52,8 +41,6 @@ def recenter_between_two_objects(turtle, image_width=640, tolerance=20, kp=0.005
     while not should_stop(stop_requested):
         center_x = image_width / 2.0
         error = center_x - mid_cx
-
-        # Stop rotating once the midpoint is close enough to image center.
         if abs(error) <= tolerance:
             break
 
@@ -62,54 +49,42 @@ def recenter_between_two_objects(turtle, image_width=640, tolerance=20, kp=0.005
         if angular_vel > max_vel:
             angular_vel = max_vel
         direction = 1 if error > 0 else -1
-
-        # Rotate proportionally toward the midpoint.
         turtle.cmd_velocity(linear=0.0, angular=direction * angular_vel)
 
-        # Refresh detections continuously during centering.
         objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='gate')
         if len(objects) < 2:
             print("Centrovani preruseno: jeden nebo oba objekty zmizely ze zaberu.")
             turtle.cmd_velocity(0.0, 0.0)
             return None
 
-        # Recompute the midpoint from the newest detections.
         cx1, cy1 = float(objects[0][0]), float(objects[0][1])
         cx2, cy2 = float(objects[1][0]), float(objects[1][1])
         mid_cx = (cx1 + cx2) / 2.0
         mid_cy = (cy1 + cy2) / 2.0
-
         rate.sleep()
 
     turtle.cmd_velocity(0.0, 0.0)
-
     if should_stop(stop_requested):
         print("Centrovani preruseno: byl pozadovan stop.")
         return None
-
     return mid_cx, mid_cy
 
 
 def recenter_to_ball(turtle, image_width=640, tolerance=20, kp=0.005, stop_requested=None):
-    """Center robot on visible ball and return (cx, cy), or None if ball is lost."""
     if should_stop(stop_requested):
         print("Centrovani micku preskoceno: byl pozadovan stop.")
         return None
 
-    # Detect the current ball position in the image.
     objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
     if len(objects) == 0:
         print("Micek behem jizdy zmizel z obrazu.")
         return None
 
     cx, cy = float(objects[0][0]), float(objects[0][1])
-
     rate = Rate(10)
     while not should_stop(stop_requested):
         center_x = image_width / 2.0
         error = center_x - cx
-
-        # Stop rotating once the ball is centered well enough.
         if abs(error) <= tolerance:
             break
 
@@ -118,11 +93,8 @@ def recenter_to_ball(turtle, image_width=640, tolerance=20, kp=0.005, stop_reque
         if angular_vel > max_vel:
             angular_vel = max_vel
         direction = 1 if error > 0 else -1
-
-        # Rotate proportionally toward the ball center.
         turtle.cmd_velocity(linear=0.0, angular=direction * angular_vel)
 
-        # Refresh the ball position during centering.
         objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
         if len(objects) == 0:
             print("Micek behem centrovani zmizel z obrazu.")
@@ -133,17 +105,13 @@ def recenter_to_ball(turtle, image_width=640, tolerance=20, kp=0.005, stop_reque
         rate.sleep()
 
     turtle.cmd_velocity(0.0, 0.0)
-
     if should_stop(stop_requested):
         print("Centrovani micku preruseno: byl pozadovan stop.")
         return None
-
     return cx, cy
 
 
-
 def wrap_pi(a):
-    """Wrap angle to the interval <-pi, pi>."""
     while a > math.pi:
         a -= 2.0 * math.pi
     while a < -math.pi:
@@ -151,15 +119,12 @@ def wrap_pi(a):
     return a
 
 
-def rotate_by(turtle, rate, delta_rad, w=0.55, tol=0.05, stop_requested=None):
-    """Rotate robot by the requested relative angle using odometry feedback."""
+def rotate_by(turtle, rate, delta_rad, w=0.25, tol=0.05, stop_requested=None):
     _, _, a0 = turtle.get_odometry()
     target = wrap_pi(a0 + delta_rad)
-
     while not turtle.is_shutting_down() and not should_stop(stop_requested):
         _, _, a = turtle.get_odometry()
         err = wrap_pi(target - a)
-
         if abs(err) < tol:
             break
 
@@ -168,7 +133,6 @@ def rotate_by(turtle, rate, delta_rad, w=0.55, tol=0.05, stop_requested=None):
             ang = w
         elif ang < -w:
             ang = -w
-
         turtle.cmd_velocity(0.0, ang)
         rate.sleep()
 
@@ -177,224 +141,120 @@ def rotate_by(turtle, rate, delta_rad, w=0.55, tol=0.05, stop_requested=None):
 
 
 def drive_straight(turtle, rate, dist_m, v=0.10, tol=0.02, stop_requested=None):
-    """Drive straight for the requested distance using odometry."""
     x0, y0, _ = turtle.get_odometry()
-
     while not turtle.is_shutting_down() and not should_stop(stop_requested):
         x, y, _ = turtle.get_odometry()
         d = math.hypot(x - x0, y - y0)
-
         if d >= dist_m - tol:
             break
-
         turtle.cmd_velocity(v, 0.0)
         rate.sleep()
 
     turtle.cmd_velocity(0.0, 0.0)
     return not should_stop(stop_requested)
 
-def get_depth_z(turtle, cx=320.0, cy=240.0, window_size=7):
-    z = vision.get_average_depth(turtle, cx, cy, window_size=window_size)
-    if z is None or math.isnan(z):
-        return None
-    return z
 
-def find_opening_by_depth_scan(
-    turtle,
-    scan_step_deg=8.0,
-    opening_depth_threshold=0.40,
-    max_scan_deg=180.0,
-    stop_requested=None,
-):
-    """Rotate until the garage opening is bracketed and return a correction from the current heading."""
+def recenter_to_garage_opening(turtle, image_width=640, tolerance=20, kp=0.004, min_gap_width=80, stop_requested=None):
+    """Center robot into the largest non-yellow gap in the image."""
     if should_stop(stop_requested):
-        print("Skenovani garaze preskoceno: byl pozadovan stop.")
+        print("Centrovani otvoru preskoceno: byl pozadovan stop.")
         return None
+
+    detection = vision.find_garage_opening_center(turtle, row_ratio=0.60, min_gap_width=min_gap_width)
+    if detection is None:
+        print("Otvor garaze zatim nevidim.")
+        return None
+
+    gap_cx, gap_width, _ = detection
+    print("Nasel jsem otvor, sirka {} px, stred {:.1f}.".format(gap_width, gap_cx))
 
     rate = Rate(10)
-    step_rad = math.radians(scan_step_deg)
-    max_steps = int(round(max_scan_deg / scan_step_deg))
-
-    started_open = None
-    finished_open = None
-    steps_done = 0
-    open_flags = []
-
-    print("Zacinam hloubkove skenovani vyjezdu z garaze.")
-
-    prev_open = False
-    for step_idx in range(max_steps + 1):
-        if should_stop(stop_requested):
+    while not should_stop(stop_requested):
+        center_x = image_width / 2.0
+        error = center_x - gap_cx
+        if abs(error) <= tolerance:
             turtle.cmd_velocity(0.0, 0.0)
+            print("Otvor je vycentrovany.")
+            return gap_cx
+
+        angular_vel = abs(error) * kp
+        if angular_vel > 0.35:
+            angular_vel = 0.35
+        direction = 1 if error > 0 else -1
+        turtle.cmd_velocity(linear=0.0, angular=direction * angular_vel)
+
+        detection = vision.find_garage_opening_center(turtle, row_ratio=0.60, min_gap_width=min_gap_width)
+        if detection is None:
+            turtle.cmd_velocity(0.0, 0.0)
+            print("Pri centrovani jsem otvor ztratil.")
             return None
 
-        z = get_depth_z(turtle, 320.0, 240.0, window_size=9)
-        is_open = (z is not None) and (z > opening_depth_threshold)
-        open_flags.append(is_open)
-
-        print("scan {:02d}: depth={} m, open={}".format(
-            step_idx,
-            "None" if z is None else "{:.2f}".format(z),
-            is_open,
-        ))
-
-        if (not prev_open) and is_open and started_open is None:
-            started_open = step_idx
-            print("Nasel jsem zacatek otvoru.")
-
-        elif prev_open and (not is_open) and started_open is not None:
-            finished_open = step_idx - 1
-            print("Nasel jsem konec otvoru, skenovani konci.")
-            break
-
-        prev_open = is_open
-
-        if step_idx == max_steps:
-            break
-
-        if not rotate_by(
-            turtle,
-            rate,
-            delta_rad=step_rad,
-            w=0.65,
-            tol=0.06,
-            stop_requested=stop_requested,
-        ):
-            return None
-        steps_done += 1
-
-    if started_open is None:
-        print("Pri skenovani jsem nenasel zadny otevreny smer.")
-        return None
-
-    if finished_open is None:
-        finished_open = steps_done
-        print("Otvor zustal otevreny az do konce skenu, beru posledni viditelnou cast.")
-
-    center_step = 0.5 * (started_open + finished_open)
-    current_step = float(steps_done)
-    correction_rad = wrap_pi((center_step - current_step) * step_rad)
-
-    print(
-        "Otvor nalezen mezi kroky {} a {}, centrovaci dotoceni je {:.1f} stupnu.".format(
-            started_open,
-            finished_open,
-            math.degrees(correction_rad),
-        )
-    )
-
-    return correction_rad
-
-
-def center_opening_with_side_depth(
-    turtle,
-    left_cx=220.0,
-    right_cx=420.0,
-    cy=240.0,
-    diff_tolerance=0.04,
-    max_ang=0.20,
-    stop_requested=None,
-):
-    """Fine-center the robot in the opening by balancing left/right depth."""
-    if should_stop(stop_requested):
-        print("Jemne centrovani otvoru preskoceno: byl pozadovan stop.")
-        return False
-
-    rate = Rate(10)
-
-    for _ in range(30):
-        if should_stop(stop_requested):
-            turtle.cmd_velocity(0.0, 0.0)
-            return False
-
-        z_left = get_depth_z(turtle, left_cx, cy, window_size=5)
-        z_right = get_depth_z(turtle, right_cx, cy, window_size=5)
-
-        if z_left is None or z_right is None:
-            print("Jemne centrovani otvoru selhalo: chybi hloubka vlevo nebo vpravo.")
-            turtle.cmd_velocity(0.0, 0.0)
-            return False
-
-        err = z_left - z_right
-        if abs(err) <= diff_tolerance:
-            turtle.cmd_velocity(0.0, 0.0)
-            print("Otvor garaze je jemne vycentrovan.")
-            return True
-
-        ang = 1.2 * err
-        if ang > max_ang:
-            ang = max_ang
-        elif ang < -max_ang:
-            ang = -max_ang
-
-        turtle.cmd_velocity(0.0, ang)
+        gap_cx, gap_width, _ = detection
         rate.sleep()
 
     turtle.cmd_velocity(0.0, 0.0)
-    print("Jemne centrovani otvoru skoncilo po limitu iteraci.")
-    return True
+    return None
 
 
-def leave_garage(
-    turtle,
-    exit_distance=0.30,
-    opening_depth_threshold=0.40,
-    stop_requested=None,
-):
-    """Find the garage opening using depth, center in it, and drive out."""
+def search_and_center_garage_opening(turtle, min_gap_width=80, search_angular_speed=0.35, stop_requested=None):
+    """Rotate until a non-yellow gap is visible, then center on it."""
+    if should_stop(stop_requested):
+        print("Hledani otvoru preskoceno: byl pozadovan stop.")
+        return False
+
+    rate = Rate(10)
+    print("Hledam vychod z garaze podle zlute barvy.")
+
+    while not turtle.is_shutting_down() and not should_stop(stop_requested):
+        detection = vision.find_garage_opening_center(turtle, row_ratio=0.60, min_gap_width=min_gap_width)
+        if detection is not None:
+            turtle.cmd_velocity(0.0, 0.0)
+            print("Otvor je videt, zacinam centrovat.")
+            centered = recenter_to_garage_opening(
+                turtle,
+                image_width=640,
+                tolerance=20,
+                kp=0.004,
+                min_gap_width=min_gap_width,
+                stop_requested=stop_requested,
+            )
+            return centered is not None
+
+        turtle.cmd_velocity(linear=0.0, angular=search_angular_speed)
+        rate.sleep()
+
+    turtle.cmd_velocity(0.0, 0.0)
+    print("Hledani otvoru preruseno nebo nedokonceno.")
+    return False
+
+
+def leave_garage(turtle, exit_distance=0.30, stop_requested=None):
+    """Find non-yellow opening, center into it, and drive out."""
     if should_stop(stop_requested):
         print("Vyjezd z garaze zrusen: byl pozadovan stop.")
         return False
 
-    delta_rad = find_opening_by_depth_scan(
+    ok = search_and_center_garage_opening(
         turtle,
-        scan_step_deg=8.0,
-        opening_depth_threshold=opening_depth_threshold,
-        max_scan_deg=180.0,
+        min_gap_width=80,
+        search_angular_speed=0.35,
         stop_requested=stop_requested,
     )
-    if delta_rad is None:
+    if not ok:
         return False
 
     rate = Rate(10)
-    if not rotate_by(
-        turtle,
-        rate,
-        delta_rad=delta_rad,
-        w=0.25,
-        tol=0.04,
-        stop_requested=stop_requested,
-    ):
-        return False
-
-    center_opening_with_side_depth(
-        turtle,
-        left_cx=220.0,
-        right_cx=420.0,
-        cy=240.0,
-        diff_tolerance=0.04,
-        max_ang=0.20,
-        stop_requested=stop_requested,
-    )
-
-    front_z = get_depth_z(turtle, 320.0, 240.0, window_size=7)
-    if front_z is not None and front_z < 0.18:
-        print("Vyjezd z garaze zrusen: pred robotem je stale mala mezera {:.2f} m.".format(front_z))
-        turtle.cmd_velocity(0.0, 0.0)
-        return False
-
-    print("Vyjizdim z garaze o {:.2f} m bez dotyku sten.".format(exit_distance))
+    print("Vyjizdim z garaze o {:.2f} m.".format(exit_distance))
     ok = drive_straight(
         turtle,
         rate,
         dist_m=exit_distance,
-        v=0.14,
+        v=0.12,
         tol=0.02,
         stop_requested=stop_requested,
     )
 
     turtle.cmd_velocity(0.0, 0.0)
-
     if not ok:
         print("Vyjezd z garaze byl prerusen.")
         return False
@@ -404,14 +264,9 @@ def leave_garage(
 
 
 def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop_requested=None):
-    """
-    Helper function: measure distance, drive to a target boundary, and re-center.
-    Distinguishes between 'ball' (single object) and 'gate' (camera center and two poles).
-    """
     avg_point = None
 
     if target_type == 'ball':
-        # Measure depth directly on the currently detected ball centroid.
         objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
         if len(objects) > 0 and not should_stop(stop_requested):
             cx, cy = float(objects[0][0]), float(objects[0][1])
@@ -421,8 +276,7 @@ def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop
             print("Krok priblizeni preskocen: cilovy micek neni videt.")
         else:
             print("Krok priblizeni preskocen: stop pred merenim vzdalenosti.")
-    else:  # target_type == 'gate'
-        # For the gate, sample depth in the camera center toward the wall.
+    else:
         center_cx, center_cy = 320.0, 240.0
         if not should_stop(stop_requested):
             print("Ziskavam vzdalenost od zdi pro hranici {} m.".format(target_boundary))
@@ -433,8 +287,6 @@ def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop
     if avg_point is not None:
         current_z = float(avg_point[2])
         distance_to_travel = current_z - target_boundary
-
-        # Move only if the robot is still farther than the requested boundary.
         if distance_to_travel > 0 and not should_stop(stop_requested):
             print("Zmerena hloubka: {:.2f} m. Jedu vpred {:.2f} m k hranici {}m.".format(
                 current_z, distance_to_travel, target_boundary
@@ -444,8 +296,6 @@ def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop
 
             print("Provadim centrovani na {} m...".format(target_boundary))
             turtle.cmd_velocity(linear=0.0, angular=0.0)
-
-            # Re-center after each approach segment.
             if target_type == 'ball':
                 recenter_to_ball(turtle, stop_requested=stop_requested)
             else:
@@ -455,11 +305,6 @@ def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop
 
 
 def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop_requested=None):
-    """
-    Measure distance to target, compute drive time for drive_forward_for,
-    drive forward, and then perform verification and fine correction.
-    With target_type, the same flow can also approach a wall ('gate').
-    """
     if target_type == 'ball' and len(objects) == 0:
         print("Jizda zrusena: pro pocatecni mereni neni detekovan micek.")
         return
@@ -468,27 +313,21 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
         print("Jizda zrusena: stop pred zacatkem sekvence.")
         return
 
-    # Use a single fixed forward speed for all approach phases.
     speed = 0.15
     center_cx, center_cy = 320.0, 240.0
 
-    # First coarse stop around 1 meter from the target.
     approach_and_center(turtle, 1.0, speed, target_type, stop_requested=stop_requested)
-
     if should_stop(stop_requested):
         turtle.cmd_velocity(0.0, 0.0)
         print("Sekvence jizdy ukoncena kvuli stop pozadavku.")
         return
 
-    # Second coarse stop around 0.5 meter from the target.
     approach_and_center(turtle, 0.5, speed, target_type, stop_requested=stop_requested)
-
     if should_stop(stop_requested):
         turtle.cmd_velocity(0.0, 0.0)
         print("Sekvence jizdy ukoncena kvuli stop pozadavku.")
         return
 
-    # Final depth measurement for the last approach segment.
     avg_point = None
     if target_type == 'ball':
         objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
@@ -510,18 +349,14 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
     if avg_point is not None:
         current_z = float(avg_point[2])
         distance_to_travel = current_z - target_distance
-
-        # Execute the main final forward segment.
         if distance_to_travel > 0 and not should_stop(stop_requested):
             print("Zmerena hloubka: {:.2f} m. Jedu vpred {:.2f} m.".format(current_z, distance_to_travel))
-
             duration = distance_to_travel / speed
             drive_forward_for(turtle, speed, duration, stop_requested=stop_requested)
 
             print("Provadim kontrolu a doladeni...")
             turtle.cmd_velocity(linear=0.0, angular=0.0)
 
-            # Re-sample depth after stopping to measure the remaining error.
             if target_type == 'ball':
                 objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='ball')
                 if len(objects) > 0:
@@ -535,8 +370,6 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
             if avg_point is not None:
                 current_z = float(avg_point[2])
                 error_dist = current_z - target_distance
-
-                # Apply one extra short correction if the robot is still too far.
                 if error_dist > 0.02 and not should_stop(stop_requested):
                     print("Doladuji o {:.2f} m.".format(error_dist))
                     duration_fine = error_dist / speed
@@ -551,7 +384,6 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
         print("Sekvence jizdy ukoncena kvuli stop pozadavku.")
         return
 
-    # Re-center once more before the last residual distance check.
     if target_type == 'ball':
         centered = recenter_to_ball(turtle, stop_requested=stop_requested)
     else:
@@ -578,12 +410,9 @@ def drive_to_ball(turtle, objects, target_distance=0.1, target_type='ball', stop
     else:
         print("Kontrola po centrovani preskocena: byl pozadovan stop.")
 
-    # End the full approach sequence with an explicit zero command.
     turtle.cmd_velocity(0.0, 0.0)
     if should_stop(stop_requested):
         print("Sekvence jizdy ukoncena kvuli stop pozadavku.")
     else:
         print("Sekvence jizdy dokoncena.")
-
-
 

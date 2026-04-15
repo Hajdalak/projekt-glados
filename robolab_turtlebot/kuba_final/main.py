@@ -28,13 +28,12 @@ def bumper_callback(msg):
 
 
 def leave_garage_start():
-    """Find the garage opening using depth and drive a short distance out."""
+    """Find the garage opening using yellow HSV and drive a short distance out."""
     abort_if_needed()
 
     ok = movement.leave_garage(
         turtle,
         exit_distance=0.30,
-        opening_depth_threshold=0.4,
         stop_requested=safety.is_stop_requested,
     )
     if not ok:
@@ -121,4 +120,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
 
