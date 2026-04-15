@@ -4,6 +4,12 @@ from robolab_turtlebot import Rate, get_time
 import vision
 import safety
 
+DEBUG_GARAGE = True
+
+
+def garage_dbg(msg):
+    if DEBUG_GARAGE:
+        print("[GARAGE MOVE] {}".format(msg))
 
 def should_stop(stop_requested=None):
     if stop_requested is not None:
@@ -177,24 +183,24 @@ def drive_straight(turtle, rate, dist_m, v=0.10, tol=0.02, stop_requested=None):
 def search_for_garage_opening(
     turtle,
     stop_requested=None,
-    search_angular_speed=0.20,
-    min_gap_width=50,
-    row_ratio=0.68
+    search_angular_speed=0.18,
+    min_gap_width=40,
+    row_ratio=0.55
 ):
     rate = Rate(10)
     opening_seen_count = 0
     needed_count = 2
+    iteration = 0
 
     print("Hledam otvor garaze...")
 
     while not should_stop(stop_requested):
+        iteration += 1
+
         opening = vision.find_garage_opening_center(
             turtle,
             row_ratio=row_ratio,
-            band_half_height=18,
-            min_gap_width=min_gap_width,
-            min_wall_width=12,
-            yellow_ratio_threshold=0.12,
+            min_gap_width=min_gap_width
         )
 
         if opening is not None:
@@ -202,53 +208,66 @@ def search_for_garage_opening(
             turtle.cmd_velocity(0.0, 0.0)
 
             gap_cx, gap_width, row_y = opening
-            print("Otvor kandiduje: stred {:.1f}, sirka {} px, potvrzeni {}/{}.".format(
-                gap_cx, gap_width, opening_seen_count, needed_count
-            ))
+            garage_dbg(
+                "SEARCH iter={} | opening ANO | center={:.1f}, width={}, row={} | potvrzeni {}/{}".format(
+                    iteration, gap_cx, gap_width, row_y, opening_seen_count, needed_count
+                )
+            )
 
             if opening_seen_count >= needed_count:
                 print("Otvor potvrzen.")
                 return opening
         else:
+            garage_dbg(
+                "SEARCH iter={} | opening NE | tocim se angular={:.2f}".format(
+                    iteration, search_angular_speed
+                )
+            )
             opening_seen_count = 0
             turtle.cmd_velocity(0.0, search_angular_speed)
 
         rate.sleep()
 
     turtle.cmd_velocity(0.0, 0.0)
+    garage_dbg("SEARCH konec kvuli stop/shutdown")
     return None
-
 
 def center_garage_opening(
     turtle,
     image_width=640,
-    tolerance=25,
+    tolerance=30,
     kp=0.0035,
-    min_gap_width=60,
-    row_ratio=0.68,
+    min_gap_width=40,
+    row_ratio=0.55,
     stop_requested=None
 ):
     rate = Rate(10)
     good_count = 0
-    needed_good = 3
+    needed_good = 2
     lost_count = 0
-    max_lost = 8
+    max_lost = 10
+    iteration = 0
 
     print("Centruji se do otvoru garaze...")
 
     while not should_stop(stop_requested):
+        iteration += 1
+
         opening = vision.find_garage_opening_center(
             turtle,
             row_ratio=row_ratio,
-            band_half_height=18,
-            min_gap_width=min_gap_width,
-            min_wall_width=12,
-            yellow_ratio_threshold=0.12,
+            min_gap_width=min_gap_width
         )
 
         if opening is None:
             lost_count += 1
             turtle.cmd_velocity(0.0, 0.0)
+
+            garage_dbg(
+                "CENTER iter={} | opening NE | lost_count={}/{}".format(
+                    iteration, lost_count, max_lost
+                )
+            )
 
             if lost_count >= max_lost:
                 print("Otvor ztracen.")
@@ -261,13 +280,21 @@ def center_garage_opening(
         gap_cx, gap_width, row_y = opening
         error = (image_width / 2.0) - gap_cx
 
-        print("Otvor: stred {:.1f}, sirka {} px, chyba {:.1f} px.".format(
-            gap_cx, gap_width, error
-        ))
+        garage_dbg(
+            "CENTER iter={} | opening ANO | center={:.1f}, width={}, row={} | error={:.1f}".format(
+                iteration, gap_cx, gap_width, row_y, error
+            )
+        )
 
         if abs(error) <= tolerance:
             good_count += 1
             turtle.cmd_velocity(0.0, 0.0)
+
+            garage_dbg(
+                "CENTER iter={} | v toleranci | good_count={}/{}".format(
+                    iteration, good_count, needed_good
+                )
+            )
 
             if good_count >= needed_good:
                 print("Otvor vycentrovan.")
@@ -281,42 +308,58 @@ def center_garage_opening(
             elif ang < -0.18:
                 ang = -0.18
 
+            garage_dbg(
+                "CENTER iter={} | mimo toleranci | posilam angular={:.3f}".format(
+                    iteration, ang
+                )
+            )
+
             turtle.cmd_velocity(0.0, ang)
 
         rate.sleep()
 
     turtle.cmd_velocity(0.0, 0.0)
+    garage_dbg("CENTER konec kvuli stop/shutdown")
     return None
 
 
-def leave_garage(turtle, exit_distance=0.30, stop_requested=None):
+def leave_garage(turtle, exit_distance=0.20, stop_requested=None):
+    garage_dbg("LEAVE_GARAGE start")
+
     if should_stop(stop_requested):
         print("Vyjezd z garaze zrusen: byl pozadovan stop.")
+        garage_dbg("LEAVE_GARAGE abort: stop uz na zacatku")
         return False
 
     opening = search_for_garage_opening(
         turtle,
         stop_requested=stop_requested,
-        search_angular_speed=0.25,
-        min_gap_width=80,
-        row_ratio=0.60
+        search_angular_speed=0.18,
+        min_gap_width=40,
+        row_ratio=0.55
     )
     if opening is None:
         print("Otvor jsem nenasel.")
+        garage_dbg("LEAVE_GARAGE fail: search vratil None")
         return False
+
+    garage_dbg("LEAVE_GARAGE: search uspesny")
 
     centered = center_garage_opening(
         turtle,
         image_width=640,
-        tolerance=20,
-        kp=0.004,
-        min_gap_width=80,
-        row_ratio=0.60,
+        tolerance=30,
+        kp=0.0035,
+        min_gap_width=40,
+        row_ratio=0.55,
         stop_requested=stop_requested
     )
     if centered is None:
         print("Otvor se nepodarilo vycentrovat.")
+        garage_dbg("LEAVE_GARAGE fail: center vratil None")
         return False
+
+    garage_dbg("LEAVE_GARAGE: center uspesny, jedu ven")
 
     print("Vyjizdim z garaze...")
     rate = Rate(10)
@@ -334,11 +377,12 @@ def leave_garage(turtle, exit_distance=0.30, stop_requested=None):
 
     if ok:
         print("Vyjezd z garaze dokoncen.")
+        garage_dbg("LEAVE_GARAGE success")
     else:
         print("Vyjezd z garaze prerusen.")
+        garage_dbg("LEAVE_GARAGE fail: drive_straight vratil False")
 
     return ok
-
 
 def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop_requested=None):
     avg_point = None

@@ -3,6 +3,13 @@ from __future__ import print_function
 import cv2
 import numpy as np
 
+DEBUG_GARAGE = True
+
+
+def garage_dbg(msg):
+    if DEBUG_GARAGE:
+        print("[GARAGE VISION] {}".format(msg))
+
 # Ball HSV profile.
 BALL_MIN_H = 37
 BALL_MAX_H = 74
@@ -22,7 +29,7 @@ GATE_MAX_V = 255
 # Yellow garage HSV profile.
 # These values are only a starting point and may need tuning in lab lighting.
 GARAGE_MIN_H = 20
-GARAGE_MAX_H = 40
+GARAGE_MAX_H = 100
 GARAGE_MIN_S = 100
 GARAGE_MAX_S = 255
 GARAGE_MIN_V = 70
@@ -82,8 +89,14 @@ def get_bgr(turtle):
 def get_hsv(turtle):
     rgb_image = get_bgr(turtle)
     if rgb_image is None:
+        garage_dbg("get_hsv: RGB frame je None")
         return None
-    return cv2.cvtColor(rgb_image, cv2.COLOR_RGB2HSV)
+
+    garage_dbg("get_hsv: frame shape = {}".format(rgb_image.shape))
+
+    # Pokud by HSV porad nesedelo, zkus COLOR_BGR2HSV.
+    hsv = cv2.cvtColor(rgb_image, cv2.COLOR_RGB2HSV)
+    return hsv
 
 
 def create_hsv_mask(hsv_image, min_h, max_h, min_s, max_s, min_v, max_v):
@@ -220,6 +233,7 @@ def get_average_depth(turtle, cx, cy, window_size=7):
 def get_yellow_mask(turtle):
     hsv = get_hsv(turtle)
     if hsv is None:
+        garage_dbg("get_yellow_mask: hsv je None")
         return None
 
     mask = create_hsv_mask(
@@ -232,94 +246,97 @@ def get_yellow_mask(turtle):
         GARAGE_MAX_V,
     )
 
-    # Pro garaz je dulezite spis zacelit diry ve zlute stene,
-    # ne odmazavat male oblasti zlute.
-    kernel_close = np.ones((7, 7), dtype=np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel_close, iterations=2)
+    kernel = np.ones((5, 5), dtype=np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=1)
+
+    yellow_pixels = int(np.sum(mask > 0))
+    total_pixels = int(mask.shape[0] * mask.shape[1])
+    yellow_ratio = 100.0 * yellow_pixels / float(total_pixels)
+
+    garage_dbg(
+        "mask: yellow_pixels = {}, ratio = {:.2f}% | HSV=({}, {}, {})-({}, {}, {})".format(
+            yellow_pixels,
+            yellow_ratio,
+            GARAGE_MIN_H, GARAGE_MIN_S, GARAGE_MIN_V,
+            GARAGE_MAX_H, GARAGE_MAX_S, GARAGE_MAX_V
+        )
+    )
 
     return mask
 
 def find_garage_opening_center(
     turtle,
-    row_ratio=0.68,
-    band_half_height=18,
-    min_gap_width=50,
-    min_wall_width=12,
-    yellow_ratio_threshold=0.12,
+    row_ratio=0.55,
+    min_gap_width=40,
 ):
     """
-    Hleda otvor garaze jako mezeru bez zlute mezi dvema zlutymi stenami.
+    Hleda otvor garaze pres vnitrni hrany leve a prave zlate steny.
     Vraci (gap_center_x, gap_width, scan_row) nebo None.
     """
     mask = get_yellow_mask(turtle)
     if mask is None:
+        garage_dbg("find_opening: mask je None")
         return None
 
     h, w = mask.shape
 
     row = int(round(h * row_ratio))
-    row = max(0, min(h - 1, row))
-
-    y1 = max(0, row - band_half_height)
-    y2 = min(h, row + band_half_height + 1)
+    y1 = max(0, row - 35)
+    y2 = min(h, row + 35)
 
     band = mask[y1:y2, :]
     if band.size == 0:
+        garage_dbg("find_opening: band je prazdny")
         return None
 
     col_sum = np.sum(band > 0, axis=0)
-
-    threshold = max(1, int(yellow_ratio_threshold * band.shape[0]))
+    threshold = max(2, int(0.10 * band.shape[0]))
     yellow_cols = col_sum >= threshold
-    free_cols = ~yellow_cols
 
-    gaps = []
-    in_gap = False
-    start = 0
+    mid = w // 2
+    left_cols = yellow_cols[:mid]
+    right_cols = yellow_cols[mid:]
 
-    for x in range(w):
-        if free_cols[x] and not in_gap:
-            start = x
-            in_gap = True
-        elif (not free_cols[x]) and in_gap:
-            end = x - 1
-            gaps.append((start, end))
-            in_gap = False
+    left_count = int(np.sum(left_cols))
+    right_count = int(np.sum(right_cols))
 
-    if in_gap:
-        gaps.append((start, w - 1))
+    garage_dbg(
+        "find_opening: row_ratio={:.2f}, row={}, band=({}, {}), threshold={}, left_yellow_cols={}, right_yellow_cols={}".format(
+            row_ratio, row, y1, y2, threshold, left_count, right_count
+        )
+    )
 
-    valid_gaps = []
-
-    for gs, ge in gaps:
-        gap_width = ge - gs + 1
-        if gap_width < min_gap_width:
-            continue
-
-        left_wall_width = 0
-        i = gs - 1
-        while i >= 0 and yellow_cols[i]:
-            left_wall_width += 1
-            i -= 1
-
-        right_wall_width = 0
-        i = ge + 1
-        while i < w and yellow_cols[i]:
-            right_wall_width += 1
-            i += 1
-
-        # ve fazi hledani bud tolerantnejsi
-        if left_wall_width < min_wall_width or right_wall_width < min_wall_width:
-            continue
-
-        valid_gaps.append((gs, ge))
-
-    if not valid_gaps:
+    if not np.any(left_cols):
+        garage_dbg("find_opening: vlevo nevidim zadnou zloutou stenu")
         return None
 
-    best_start, best_end = max(valid_gaps, key=lambda p: p[1] - p[0])
+    if not np.any(right_cols):
+        garage_dbg("find_opening: vpravo nevidim zadnou zloutou stenu")
+        return None
 
-    gap_width = best_end - best_start + 1
-    gap_center_x = 0.5 * (best_start + best_end)
+    left_idx = np.where(left_cols)[0]
+    right_idx = np.where(right_cols)[0] + mid
 
-    return float(gap_center_x), int(gap_width), int(row)
+    left_inner = int(np.max(left_idx))
+    right_inner = int(np.min(right_idx))
+
+    gap_width = right_inner - left_inner - 1
+    gap_center_x = 0.5 * (left_inner + right_inner)
+    scan_row = (y1 + y2) // 2
+
+    garage_dbg(
+        "find_opening: left_inner={}, right_inner={}, gap_width={}, gap_center_x={:.1f}".format(
+            left_inner, right_inner, gap_width, gap_center_x
+        )
+    )
+
+    if gap_width < min_gap_width:
+        garage_dbg(
+            "find_opening: mezera je moc uzka ({} < {}), neberu ji".format(
+                gap_width, min_gap_width
+            )
+        )
+        return None
+
+    garage_dbg("find_opening: OTVOR NALEZEN")
+    return float(gap_center_x), int(gap_width), int(scan_row)
