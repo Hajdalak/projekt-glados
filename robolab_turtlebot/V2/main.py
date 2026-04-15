@@ -116,6 +116,9 @@ def main():
     turtle.register_bumper_event_cb(bumper_callback)
 
     try:
+        # Wait for the manual start signal.
+        wait_for_button()
+        
         found_garage = movement.find_garage_by_turning_left(
             turtle,
             stop_requested=safety.is_stop_requested,
@@ -141,9 +144,6 @@ def main():
         if not repositioned:
             print("Nepodarilo se provest kratky manevr pred startem.")
             return
-
-        # Wait for the manual start signal.
-        wait_for_button()
 
         # Find and approach the ball.
         ok = start_drive()
