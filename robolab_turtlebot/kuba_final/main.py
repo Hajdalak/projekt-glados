@@ -1,10 +1,9 @@
 from __future__ import print_function
-import sys
 from robolab_turtlebot import Turtlebot, Rate
 
 import detection
 import movement
-import drive_around as drive_around
+import drive_around
 import safety
 
 # Create the main robot instance used by the whole program flow.
@@ -28,62 +27,48 @@ def bumper_callback(msg):
         print("bumper 1. Do neceho jsem narazil.")
 
 
-def start_drive():
-    """Find ball, center on it, and approach it."""
-    # Stop early if emergency stop was already requested.
+def leave_garage_start():
+    """Find the garage opening using depth and drive a short distance out."""
     abort_if_needed()
 
-    # Search for the ball in the scene.
+    ok = movement.leave_garage(
+        turtle,
+        exit_distance=0.30,
+        opening_depth_threshold=0.35,
+        stop_requested=safety.is_stop_requested,
+    )
+    if not ok:
+        abort_if_needed()
+        print("Vyjezd z garaze selhal, koncim.")
+        return False
+
+    abort_if_needed()
+    return True
+
+
+def start_drive():
+    """Find ball, center on it, and approach it."""
+    abort_if_needed()
+
     ball_center = detection.find_ball(turtle, stop_requested=safety.is_stop_requested)
     if ball_center is None:
         abort_if_needed()
-        print("Byl aktivovan killswitch, koncim.")
+        print("Micek jsem nenasel, koncim.")
         return False
 
-    # Fine-center the robot on the visible ball.
     centered = movement.recenter_to_ball(turtle, stop_requested=safety.is_stop_requested)
     if centered is None:
         abort_if_needed()
         print("Micek nelze vystredit, koncim.")
         return False
 
-    # Build the object list expected by the drive helper.
     cx, cy = centered
     objects = [(cx, cy)]
 
-    # Approach the ball in multiple controlled steps.
     movement.drive_to_ball(
         turtle,
         objects,
-        0.3,
-        stop_requested=safety.is_stop_requested
-    )
-
-    abort_if_needed()
-    return True
-
-
-def gate_go():
-    """Center between gate objects and drive toward the gate."""
-    # Stop early if emergency stop was already requested.
-    abort_if_needed()
-
-    # Center between the two detected gate poles.
-    gate_center = movement.recenter_between_two_objects(
-        turtle,
-        stop_requested=safety.is_stop_requested
-    )
-    if gate_center is None:
-        abort_if_needed()
-        print("Pocatecni centrovani selhalo: brána neni videt. Konec.")
-        return False
-
-    # Approach the gate using the wall-centered mode.
-    movement.drive_to_ball(
-        turtle,
-        [],
-        target_distance=0.2,
-        target_type='gate',
+        target_distance=0.3,
         stop_requested=safety.is_stop_requested
     )
 
@@ -103,7 +88,6 @@ def wait_for_button():
     turtle.register_button_event_cb(registerCallback)
     wait_rate = Rate(10)
 
-    # Idle until the start button is pressed or emergency stop is active.
     while not buttonPressed and not safety.is_stop_requested():
         wait_rate.sleep()
 
@@ -111,31 +95,27 @@ def wait_for_button():
 
 
 def main():
-    """Robot entrypoint."""
-    # Register the global emergency bumper handler once at startup.
+    """Robot entrypoint for: garage exit -> ball -> drive around -> stop."""
     turtle.register_bumper_event_cb(bumper_callback)
 
     try:
-        # Wait for the manual start signal.
         wait_for_button()
 
-        # Find and approach the ball.
+        ok = leave_garage_start()
+        if not ok:
+            return
+
         ok = start_drive()
         if not ok:
             return
 
-        # Perform the drive-around maneuver.
         abort_if_needed()
         drive_around.drive_around(turtle, stop_requested=safety.is_stop_requested)
-
-        # Re-center and drive to the gate.
         abort_if_needed()
-        ok = gate_go()
-        if not ok:
-            return
+
+        print("Program uspesne dokoncen.")
 
     finally:
-        # Always send a final zero command before exiting.
         turtle.cmd_velocity(0.0, 0.0)
 
 
