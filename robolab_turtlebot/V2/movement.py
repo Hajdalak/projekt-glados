@@ -239,11 +239,11 @@ def rotate_left_10deg_and_drive_30cm(turtle, stop_requested=None):
         print("Kratky manevr prerusen po otoceni.")
         return False
 
-    print("Jedu vpred 35 cm.")
+    print("Jedu vpred 20 cm.")
     ok = drive_around.drive_straight(
         turtle,
         rate,
-        dist_m=0.35,
+        dist_m=0.20,
         v=0.15,
         stop_requested=stop_requested,
     )
