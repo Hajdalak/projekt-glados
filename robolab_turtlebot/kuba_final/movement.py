@@ -343,7 +343,7 @@ def leave_garage(
 
     delta_rad = find_opening_by_depth_scan(
         turtle,
-        scan_step_deg=10.0,
+        scan_step_deg=15.0,
         opening_depth_threshold=opening_depth_threshold,
         max_scan_deg=360.0,
         stop_requested=stop_requested,
