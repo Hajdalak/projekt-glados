@@ -38,6 +38,20 @@ GATE_DEFAULT_MIN_AREA = 120
 GATE_DEFAULT_MAX_AREA = 20000
 GATE_DEFAULT_AXIS_RATIO_MIN = 0.10
 
+# Přidej tyto konstanty nahoru do vision.py k ostatním
+GARAGE_MIN_H = 20  # Žlutá barva začíná kolem 20
+GARAGE_MAX_H = 40  # a končí kolem 40
+GARAGE_MIN_S = 100
+GARAGE_MAX_S = 255
+GARAGE_MIN_V = 100
+GARAGE_MAX_V = 255
+GARAGE_DEFAULT_MIN_AREA = 500 # Garáž bude velká, vyfiltrujeme šum
+GARAGE_DEFAULT_MAX_AREA = 50000
+GARAGE_DEFAULT_AXIS_RATIO_MIN = 0.1
+
+# Uvnitř funkce _resolve_detection_profile(target_type) přidej tuto podmínku:
+    
+       
 
 def _resolve_detection_profile(target_type):
     """Return HSV and component-filter defaults for the given target type."""
@@ -54,7 +68,17 @@ def _resolve_detection_profile(target_type):
             'max_area': GATE_DEFAULT_MAX_AREA,
             'axis_tolerance': GATE_DEFAULT_AXIS_RATIO_MIN,
         }
-
+    if target_type == 'garage':
+        return {
+            'min_h': GARAGE_MIN_H,
+            'max_h': GARAGE_MAX_H,
+            'min_s': GARAGE_MIN_S,
+            'max_s': GARAGE_MAX_S,
+            'min_v': GARAGE_MIN_V,
+            'max_v': GARAGE_MAX_V,
+            'min_area': GARAGE_DEFAULT_MIN_AREA,
+            'max_area': GARAGE_DEFAULT_MAX_AREA,
+            'axis_tolerance': GARAGE_DEFAULT_AXIS_RATIO_MIN, }
     # Default behavior remains the ball detector.
     return {
         'min_h': BALL_MIN_H,
@@ -67,6 +91,7 @@ def _resolve_detection_profile(target_type):
         'max_area': BALL_DEFAULT_MAX_AREA,
         'axis_tolerance': BALL_DEFAULT_AXIS_RATIO_MIN,
     }
+    
 
 
 def get_hsv(turtle):

@@ -6,12 +6,103 @@ import detection
 import movement
 import drive_around as drive_around
 import safety
+import vision
+import math
 
 # Create the main robot instance used by the whole program flow.
 turtle = Turtlebot(rgb=True, pc=True)
 buttonPressed = False
 
+def escape_to_garage(turtle, escape_dist_m=1.5, stop_requested=None):
+    """
+    Rotate 360 degrees smoothly, look for the 'garage' using HSV vision,
+    find the center of the detection sector, and drive towards it.
+    """
+    print("Hledam zlutou garaz...")
+    rate = Rate(10)
+    
+    garage_angles = []
 
+    # OCHRANA PROTI PÁDU: Počkáme na inicializaci odometrie
+    print("Cekam na inicializaci odometrie...")
+    while not safety.is_stop_requested():
+        if turtle.get_odometry() is not None:
+            break
+        rate.sleep()
+
+    # Reset odometrie před plynulým otáčením
+    turtle.reset_odometry()
+    while not safety.is_stop_requested() and not (stop_requested and stop_requested()):
+        x, y, a = turtle.get_odometry()
+        if x == 0 and y == 0 and a == 0:
+            break
+        rate.sleep()
+
+    # Roztočíme robota plynule
+    turtle.cmd_velocity(linear=0.0, angular=0.5)
+    
+    total_rotated = 0.0
+    last_angle = 0.0
+
+    # Sweep 360 degrees smoothly
+    while total_rotated < 2.0 * math.pi:
+        if safety.is_stop_requested() or (stop_requested and stop_requested()):
+            print("Hledani garaze preruseno.")
+            turtle.cmd_velocity(0.0, 0.0)
+            return False
+
+        # Zkontrolujeme, jestli kamera prave ted vidi garaz
+        objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='garage')
+        _, _, current_angle = turtle.get_odometry()
+
+        # Hlídáme, kolik jsme se už celkově otočili
+        delta = current_angle - last_angle
+        while delta > math.pi: 
+            delta -= 2.0 * math.pi
+        while delta < -math.pi: 
+            delta += 2.0 * math.pi
+        total_rotated += abs(delta)
+        last_angle = current_angle
+
+        # Pokud kamera vidí alespoň jeden objekt splňující parametry garáže
+        if len(objects) > 0:
+            print("Vidim garaz! Uhel: {:.2f} rad".format(current_angle))
+            garage_angles.append(current_angle)
+
+    # Jakmile dokončíme celou otáčku, zastavíme robota
+    turtle.cmd_velocity(0.0, 0.0)
+
+    if len(garage_angles) == 0:
+        print("Garaz nenalezena (nikde kolem neni zluta barva).")
+        return False
+
+    print("Pocitam stred garaze (jednoduchy stred pole)...")
+    # Find the middle angle simply by taking the middle element of the array
+    mid_index = len(garage_angles) // 2
+    target_angle = garage_angles[mid_index]
+
+    print("Stred garaze nalezen na {:.2f} rad. Natacim se...".format(target_angle))
+
+    # Turn robot toward the calculated target angle
+    _, _, current_angle = turtle.get_odometry()
+    diff = target_angle - current_angle
+
+    # Normalize shortest rotation difference to <-pi, pi>
+    while diff > math.pi:
+        diff -= 2.0 * math.pi
+    while diff < -math.pi:
+        diff += 2.0 * math.pi
+
+    if not rotate_by(turtle, rate, diff, w=0.5, stop_requested=stop_requested):
+        return False
+
+    print("Smer na garaz nastaven, vyjizdim...")
+    # Drive straight out to the garage
+    if not drive_straight(turtle, rate, escape_dist_m, v=0.2, stop_requested=stop_requested):
+        return False
+
+    print("Uspesne jsem dorazil ke garazi.")
+    return True
 def abort_if_needed():
     """Stop the robot and terminate the program when emergency stop is active."""
     if safety.is_stop_requested():
