@@ -225,7 +225,7 @@ def main():
 
     try:
         # Wait for the manual start signal.
-        escape_from_box(turtle)
+        escape_from_garage(turtle)
 
         wait_for_button()
 
