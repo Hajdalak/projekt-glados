@@ -133,7 +133,15 @@ def main():
         if not lost_garage:
             print("Garaz se nepodarilo nechat zmizet ze zaberu.")
             return
-        
+
+        repositioned = movement.rotate_left_10deg_and_drive_30cm(
+            turtle,
+            stop_requested=safety.is_stop_requested,
+        )
+        if not repositioned:
+            print("Nepodarilo se provest kratky manevr pred startem.")
+            return
+
         # Wait for the manual start signal.
         wait_for_button()
 

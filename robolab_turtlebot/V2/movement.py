@@ -1,5 +1,7 @@
 from __future__ import print_function
+import math
 from robolab_turtlebot import Rate, get_time
+import drive_around
 import vision
 import safety
 
@@ -211,6 +213,45 @@ def lose_garage_by_turning_left(
         return False
 
     print("Garaz zmizela ze zaberu.")
+    return True
+
+
+def rotate_left_10deg_and_drive_30cm(turtle, stop_requested=None):
+    """Rotate left by 10 degrees and then drive forward 30 cm."""
+    if should_stop(stop_requested):
+        print("Kratky manevr preskocen: byl pozadovan stop.")
+        return False
+
+    rate = Rate(10)
+    print("Otacim robota o 10 stupnu doleva.")
+    ok = drive_around.rotate_by(
+        turtle,
+        rate,
+        delta_rad=math.radians(10.0),
+        w=0.25,
+        stop_requested=stop_requested,
+    )
+    if not ok:
+        return False
+
+    if should_stop(stop_requested):
+        turtle.cmd_velocity(0.0, 0.0)
+        print("Kratky manevr prerusen po otoceni.")
+        return False
+
+    print("Jedu vpred 30 cm.")
+    ok = drive_around.drive_straight(
+        turtle,
+        rate,
+        dist_m=0.30,
+        v=0.15,
+        stop_requested=stop_requested,
+    )
+    if not ok:
+        return False
+
+    turtle.cmd_velocity(0.0, 0.0)
+    print("Kratky manevr dokoncen.")
     return True
 
 
