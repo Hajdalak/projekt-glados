@@ -34,7 +34,7 @@ def leave_garage_start():
     ok = movement.leave_garage(
         turtle,
         exit_distance=0.30,
-        opening_depth_threshold=0.35,
+        opening_depth_threshold=0.40,
         stop_requested=safety.is_stop_requested,
     )
     if not ok:
