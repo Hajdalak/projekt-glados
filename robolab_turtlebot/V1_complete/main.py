@@ -4,7 +4,7 @@ from robolab_turtlebot import Turtlebot, Rate
 
 import detection
 import movement
-import V1_complete.drive_around as drive_around
+import drive_around as drive_around
 import safety
 
 # Create the main robot instance used by the whole program flow.
