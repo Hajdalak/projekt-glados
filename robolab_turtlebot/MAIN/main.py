@@ -11,11 +11,26 @@ import vision
 # Create the main robot instance used by the whole program flow.
 turtle = Turtlebot(rgb=True, pc=True)
 buttonPressed = False
+def get_front_distance(turtle):
+    """
+    Pomocna funkce pro zjisteni vzdalenosti pred robotem (BEZ point cloudu).
+    Zde si dopln cteni z tveho realneho senzoru (napriklad 2D laser/LiDAR).
+    """
+    try:
+        scan = turtle.get_laserscan()
+        # Vetsinou byva stred mereni laseru uprostred pole
+        mid_idx = len(scan) // 2
+        dist = scan[mid_idx]
+        
+        # Osetreni neplatnych hodnot
+        if dist <= 0.0 or math.isnan(dist):
+            return float('inf')
+        return float(dist)
+    except Exception:
+        # Pokud se senzor nepodari nacist, predpokladame prekazku/neplatno
+        return float('inf')
 def escape_from_box(turtle, step_deg=10, box_threshold_m=1.0, escape_dist_m=1.5, stop_requested=None):
-    """
-    Rotate 360 degrees by step_deg, measure center depth, 
-    find the opening in the box, compute the center angle, and drive out.
-    """
+
     print("Hledam vychod z boxu...")
     rate = Rate(10)
     steps = int(360 / step_deg)
@@ -23,29 +38,20 @@ def escape_from_box(turtle, step_deg=10, box_threshold_m=1.0, escape_dist_m=1.5,
     
     open_angles = []
 
-    # Sweep 360 degrees step by step
+
     for _ in range(steps):
         if safety.is_stop_requested() or (stop_requested and stop_requested()):
             print("Hledani vychodu preruseno.")
             return False
 
-        # Read depth at the absolute center of the camera
-        avg_point = vision.get_average_3d_point(turtle, 320.0, 240.0)
+        dist = get_front_distance(turtle)
         _, _, current_angle = turtle.get_odometry()
-
-        if avg_point is not None and not math.isnan(avg_point[2]):
-            dist = float(avg_point[2])
-        else:
-            # If the sensor returns NaN, it usually means empty space (infinity)
-            dist = float('inf')
 
         print("Uhel: {:.2f} rad, Vzdalenost: {:.2f} m".format(current_angle, dist))
 
-        # Record angle if distance is greater than the box boundary
         if dist > box_threshold_m:
             open_angles.append(current_angle)
 
-        # Rotate to the next step
         if not drive_around.rotate_by(turtle, rate, step_rad, w=0.5, stop_requested=stop_requested):
             return False
 
@@ -54,29 +60,26 @@ def escape_from_box(turtle, step_deg=10, box_threshold_m=1.0, escape_dist_m=1.5,
         return False
 
     print("Pocitam stred vychodu...")
-    # Calculate target angle using circular mean to safely handle pi/-pi crossings
+
     sum_sin = sum(math.sin(a) for a in open_angles)
     sum_cos = sum(math.cos(a) for a in open_angles)
     target_angle = math.atan2(sum_sin, sum_cos)
 
     print("Stred vychodu vypocitan na {:.2f} rad. Natacim se...".format(target_angle))
 
-    # Turn robot toward the calculated target angle
     _, _, current_angle = turtle.get_odometry()
     diff = target_angle - current_angle
 
-    # Normalize shortest rotation difference to <-pi, pi>
+
     while diff > math.pi:
         diff -= 2.0 * math.pi
     while diff < -math.pi:
         diff += 2.0 * math.pi
 
-    if not movement.rotate_by(turtle, rate, diff, w=0.5, stop_requested=stop_requested):
+    if not drive_around.rotate_by(turtle, rate, diff, w=0.5, stop_requested=stop_requested):
         return False
-
-    print("Smer na vychod nastaven, vyjizdim z boxu...")
-    # Drive straight out to escape the box bounds
-    if not movement.drive_straight(turtle, rate, escape_dist_m, v=0.2, stop_requested=stop_requested):
+    
+    if not drive_around.drive_straight(turtle, rate, escape_dist_m, v=0.2, stop_requested=stop_requested):
         return False
 
     print("Uspesne jsem vyjel z boxu.")
