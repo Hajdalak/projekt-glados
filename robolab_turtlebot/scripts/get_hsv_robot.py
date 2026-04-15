@@ -9,8 +9,8 @@ import numpy as np
 from robolab_turtlebot import Rate, Turtlebot
 
 WINDOW_MAIN = 'Turtlebot HSV tuner'
-WINDOW_MASK = 'Raw HSV mask'
-WINDOW_FILTERED = 'Filtered mask (area + axis ratio)'
+WINDOW_RAW = 'Raw HSV mask'
+WINDOW_MASK = 'Area-filtered HSV mask'
 
 
 DEFAULTS = {
@@ -22,7 +22,6 @@ DEFAULTS = {
 	'max_v': 255,
 	'min_area': 700,
 	'max_area': 6000,
-	'axis_ratio_x100': 75,
 	'kernel_size': 5,
 	'morph_on': 1,
 }
@@ -34,8 +33,8 @@ def _noop(_):
 
 def _make_trackbars():
 	cv2.namedWindow(WINDOW_MAIN, cv2.WINDOW_NORMAL)
+	cv2.namedWindow(WINDOW_RAW, cv2.WINDOW_NORMAL)
 	cv2.namedWindow(WINDOW_MASK, cv2.WINDOW_NORMAL)
-	cv2.namedWindow(WINDOW_FILTERED, cv2.WINDOW_NORMAL)
 
 	cv2.createTrackbar('min_h', WINDOW_MAIN, DEFAULTS['min_h'], 179, _noop)
 	cv2.createTrackbar('max_h', WINDOW_MAIN, DEFAULTS['max_h'], 179, _noop)
@@ -46,7 +45,6 @@ def _make_trackbars():
 
 	cv2.createTrackbar('min_area', WINDOW_MAIN, DEFAULTS['min_area'], 30000, _noop)
 	cv2.createTrackbar('max_area', WINDOW_MAIN, DEFAULTS['max_area'], 30000, _noop)
-	cv2.createTrackbar('axis_ratio_x100', WINDOW_MAIN, DEFAULTS['axis_ratio_x100'], 100, _noop)
 
 	cv2.createTrackbar('kernel_size', WINDOW_MAIN, DEFAULTS['kernel_size'], 31, _noop)
 	cv2.createTrackbar('morph_on', WINDOW_MAIN, DEFAULTS['morph_on'], 1, _noop)
@@ -62,7 +60,6 @@ def _read_params():
 		'max_v': cv2.getTrackbarPos('max_v', WINDOW_MAIN),
 		'min_area': cv2.getTrackbarPos('min_area', WINDOW_MAIN),
 		'max_area': cv2.getTrackbarPos('max_area', WINDOW_MAIN),
-		'axis_ratio_x100': cv2.getTrackbarPos('axis_ratio_x100', WINDOW_MAIN),
 		'kernel_size': cv2.getTrackbarPos('kernel_size', WINDOW_MAIN),
 		'morph_on': cv2.getTrackbarPos('morph_on', WINDOW_MAIN),
 	}
@@ -94,7 +91,7 @@ def _apply_morph(mask, kernel_size, morph_on):
 	return cleaned
 
 
-def _extract_objects(mask, min_area, max_area, axis_ratio_min):
+def _extract_objects(mask, min_area, max_area):
 	num_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(mask)
 
 	selected_centroids = []
@@ -111,27 +108,23 @@ def _extract_objects(mask, min_area, max_area, axis_ratio_min):
 		if width == 0 or height == 0:
 			continue
 
-		axis_ratio = min(width, height) / float(max(width, height))
-		if axis_ratio < axis_ratio_min:
-			continue
-
 		x = int(stats[label, cv2.CC_STAT_LEFT])
 		y = int(stats[label, cv2.CC_STAT_TOP])
 		w = width
 		h = height
 
 		selected_centroids.append(centroids[label])
-		selected_boxes.append((x, y, w, h, area, axis_ratio))
+		selected_boxes.append((x, y, w, h, area))
 		filtered_mask[labels == label] = 255
 
 	return selected_centroids, selected_boxes, filtered_mask
 
 
-def _draw_overlay(frame, selected_boxes, selected_centroids):
+def _draw_overlay(frame, selected_boxes, selected_centroids, params):
 	annotated = frame.copy()
 
 	for i, (box, centroid) in enumerate(zip(selected_boxes, selected_centroids), start=1):
-		x, y, w, h, area, axis_ratio = box
+		x, y, w, h, area = box
 		cx, cy = centroid
 		center = (int(round(cx)), int(round(cy)))
 
@@ -140,7 +133,7 @@ def _draw_overlay(frame, selected_boxes, selected_centroids):
 		cv2.circle(annotated, center, 3, (0, 0, 255), -1)
 		cv2.putText(
 			annotated,
-			'id {} A={} r={:.2f}'.format(i, area, axis_ratio),
+			'id {} A={}'.format(i, area),
 			(x, max(16, y - 8)),
 			cv2.FONT_HERSHEY_SIMPLEX,
 			0.45,
@@ -170,11 +163,39 @@ def _draw_overlay(frame, selected_boxes, selected_centroids):
 		cv2.LINE_AA,
 	)
 
+	param_lines = [
+		'H:[{min_h}, {max_h}]  S:[{min_s}, {max_s}]  V:[{min_v}, {max_v}]'.format(**params),
+		'Area:[{min_area}, {max_area}]  kernel={kernel_size}  morph={morph_on}'.format(**params),
+	]
+	for idx, line in enumerate(param_lines):
+		y = 72 + idx * 22
+		cv2.putText(
+			annotated,
+			line,
+			(10, y),
+			cv2.FONT_HERSHEY_SIMPLEX,
+			0.5,
+			(230, 230, 230),
+			1,
+			cv2.LINE_AA,
+		)
+
 	return annotated
 
 
+def _print_current_settings(params, header='Current settings'):
+	print('\n=== {} ==='.format(header))
+	print('H: [{} .. {}]'.format(params['min_h'], params['max_h']))
+	print('S: [{} .. {}]'.format(params['min_s'], params['max_s']))
+	print('V: [{} .. {}]'.format(params['min_v'], params['max_v']))
+	print('Area: [{} .. {}]'.format(params['min_area'], params['max_area']))
+	print('Kernel size: {}'.format(params['kernel_size']))
+	print('Morphology: {}'.format(params['morph_on']))
+	print('====================\n')
+
+
 def _print_params(params):
-	axis_ratio_min = params['axis_ratio_x100'] / 100.0
+	_print_current_settings(params, header='Copy to vision.py')
 	print('\n=== Copy to vision.py ===')
 	print('BALL_MIN_H = {}'.format(params['min_h']))
 	print('BALL_MAX_H = {}'.format(params['max_h']))
@@ -184,14 +205,13 @@ def _print_params(params):
 	print('BALL_MAX_V = {}'.format(params['max_v']))
 	print('DEFAULT_MIN_AREA = {}'.format(params['min_area']))
 	print('DEFAULT_MAX_AREA = {}'.format(params['max_area']))
-	print('DEFAULT_AXIS_RATIO_MIN = {:.2f}'.format(axis_ratio_min))
 	print('# kernel_size (for morphology): {}'.format(params['kernel_size']))
 	print('# morph_on: {}'.format(params['morph_on']))
 
 	print('\n# Function call example')
 	print(
-		'vision.show_detection_stream(turtle, max_area={}, min_area={}, axis_tolerance={:.2f})'.format(
-			params['max_area'], params['min_area'], axis_ratio_min
+		'vision.show_detection_stream(turtle, max_area={}, min_area={})'.format(
+			params['max_area'], params['min_area']
 		)
 	)
 	print('=========================\n')
@@ -206,9 +226,11 @@ def main():
 	turtle = Turtlebot(rgb=True)
 	_make_trackbars()
 	rate = Rate(20)
+	startup_params = _read_params()
 
 	print('Turtlebot HSV tuner started.')
 	print("Controls: 'q' quit, 'p' print current params, 'r' reset sliders.")
+	_print_current_settings(startup_params, header='Initial settings')
 
 	while True:
 		turtle.wait_for_rgb_image()
@@ -226,19 +248,17 @@ def main():
 		raw_mask = cv2.inRange(hsv, lower, upper).astype(np.uint8)
 		mask = _apply_morph(raw_mask, params['kernel_size'], params['morph_on'])
 
-		axis_ratio_min = params['axis_ratio_x100'] / 100.0
 		centroids, boxes, filtered_mask = _extract_objects(
 			mask,
 			params['min_area'],
 			params['max_area'],
-			axis_ratio_min,
 		)
 
-		annotated = _draw_overlay(frame, boxes, centroids)
+		annotated = _draw_overlay(frame, boxes, centroids, params)
 
 		cv2.imshow(WINDOW_MAIN, annotated)
-		cv2.imshow(WINDOW_MASK, raw_mask)
-		cv2.imshow(WINDOW_FILTERED, filtered_mask)
+		cv2.imshow(WINDOW_RAW, raw_mask)
+		cv2.imshow(WINDOW_MASK, filtered_mask)
 
 		key = cv2.waitKey(1) & 0xFF
 		if key == ord('q'):
