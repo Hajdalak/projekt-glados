@@ -285,3 +285,35 @@ def get_average_3d_point(turtle, cx, cy, window_size=5):
     )
     return avg_point
 
+def get_average_depth(turtle, cx, cy, window_size=7):
+    """Return averaged depth around image coordinates."""
+    try:
+        turtle.wait_for_depth_image()
+        depth = turtle.get_depth_image()
+    except Exception as exc:
+        print("Failed to read depth image: {}".format(exc))
+        return None
+
+    if depth is None:
+        print("Depth image is None.")
+        return None
+
+    col = int(round(cx))
+    row = int(round(cy))
+
+    h, w = depth.shape
+    half_w = window_size // 2
+
+    row_start = max(0, row - half_w)
+    row_end = min(h, row + half_w + 1)
+    col_start = max(0, col - half_w)
+    col_end = min(w, col + half_w + 1)
+
+    window = depth[row_start:row_end, col_start:col_end]
+
+    valid = window[~np.isnan(window)]
+    if valid.size == 0:
+        print("All values in selected depth window are NaN.")
+        return None
+
+    return float(np.mean(valid))

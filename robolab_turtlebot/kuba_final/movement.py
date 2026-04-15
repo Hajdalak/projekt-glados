@@ -193,18 +193,11 @@ def drive_straight(turtle, rate, dist_m, v=0.10, tol=0.02, stop_requested=None):
     turtle.cmd_velocity(0.0, 0.0)
     return not should_stop(stop_requested)
 
-
 def get_depth_z(turtle, cx=320.0, cy=240.0, window_size=7):
-    """Return only the forward Z distance from the point cloud sample."""
-    avg_point = vision.get_average_3d_point(turtle, cx, cy, window_size=window_size)
-    if avg_point is None:
-        return None
-
-    z = float(avg_point[2])
-    if math.isnan(z):
+    z = vision.get_average_depth(turtle, cx, cy, window_size=window_size)
+    if z is None or math.isnan(z):
         return None
     return z
-
 
 def find_opening_by_depth_scan(
     turtle,
@@ -240,8 +233,8 @@ def find_opening_by_depth_scan(
             turtle,
             rate,
             delta_rad=step_rad,
-            w=0.25,
-            tol=0.04,
+            w=0.50,
+            tol=0.07,
             stop_requested=stop_requested,
         ):
             return None
@@ -340,7 +333,7 @@ def center_opening_with_side_depth(
 def leave_garage(
     turtle,
     exit_distance=0.30,
-    opening_depth_threshold=0.35,
+    opening_depth_threshold=0.40,
     stop_requested=None,
 ):
     """Find the garage opening using depth, center in it, and drive out."""
