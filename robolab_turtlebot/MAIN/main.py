@@ -12,86 +12,113 @@ import vision
 turtle = Turtlebot(rgb=True, pc=True)
 buttonPressed = False
 from drive_around import rotate_by, drive_straight
-def get_front_distance(turtle):
-
-    try:
-        scan = turtle.get_laserscan()
-        
-
-        if scan is None:
-            return float('inf')
-            
-        mid_idx = len(scan) // 2
-        dist = scan[mid_idx]
-        
-        if dist <= 0.0 or math.isnan(dist):
-            return float('inf')
-        return float(dist)
-    except Exception:
+def get_center_depth(turtle):
+    """
+    Cista a bezpecna funkce pro ziskani vzdalenosti primo pred robotem 
+    z hloubkove kamery (pomoci 2D rezu - laserscanu).
+    Vraci vzdalenost v metrech. Pokud je volno/chyba, vraci nekonecno.
+    """
+    scan = turtle.get_laserscan()
+    
+    # Ochrana proti prazdnym datum ze senzoru
+    if scan is None or len(scan) == 0:
         return float('inf')
+        
+    # Vezmeme stredove mereni (robot kouka primo vpred)
+    mid_idx = len(scan) // 2
+    dist = scan[mid_idx]
+    
+    # Pokud kamera nevrati cislo (NaN) nebo je vzdalenost nulova, znamena to prazdny prostor
+    if math.isnan(dist) or dist <= 0.0:
+        return float('inf')
+        
+    return float(dist)
 
-
-def escape_from_box(turtle, step_deg=10, box_threshold_m=1.0, escape_dist_m=1.5, stop_requested=None):
-
-
+def escape_from_garage(turtle, garage_radius_m=1.0, escape_dist_m=1.5, stop_requested=None):
+    """
+    Otaci se plynule o 360 stupnu.
+    Pomoci ciste funkce meri hloubku a hleda, kde konci steny garaze (volny prostor).
+    Matematicky jednoduse najde stred tohoto volneho prostoru a vyjede ven.
+    """
+    print("Skenuji okoli pro nalezeni vychodu z garaze...")
     rate = Rate(10)
+    
+    open_angles = []
+
+    # OCHRANA: Pockame, az najedou senzory odometrie
     while not safety.is_stop_requested():
         if turtle.get_odometry() is not None:
             break
         rate.sleep()
 
-    steps = int(360 / step_deg)
-    step_rad = math.radians(step_deg)
-    
-    open_angles = []
+    # Reset odometrie pred plynulym otacenim
+    turtle.reset_odometry()
+    while not safety.is_stop_requested() and not (stop_requested and stop_requested()):
+        x, y, a = turtle.get_odometry()
+        if x == 0 and y == 0 and a == 0:
+            break
+        rate.sleep()
 
-    for _ in range(steps):
+    # Roztocime robota plynule
+    turtle.cmd_velocity(linear=0.0, angular=0.5)
+    
+    total_rotated = 0.0
+    last_angle = 0.0
+
+    # Plynula rotace 360 stupnu
+    while total_rotated < 2.0 * math.pi:
         if safety.is_stop_requested() or (stop_requested and stop_requested()):
-            print("Hledani vychodu preruseno.")
+            print("Manevr prerusen.")
+            turtle.cmd_velocity(0.0, 0.0)
             return False
 
-        dist = get_front_distance(turtle)
+        # Zjistime vzdalenost z hloubkove kamery cistou funkci
+        dist = get_center_depth(turtle)
         _, _, current_angle = turtle.get_odometry()
 
-        print("Uhel: {:.2f} rad, Vzdalenost: {:.2f} m".format(current_angle, dist))
+        # Hlidame celkove natoceni
+        delta = current_angle - last_angle
+        while delta > math.pi: delta -= 2.0 * math.pi
+        while delta < -math.pi: delta += 2.0 * math.pi
+        total_rotated += abs(delta)
+        last_angle = current_angle
 
-        if dist > box_threshold_m:
+        # Pokud je vzdalenost vetsi nez steny garaze (např. > 1 metr), jsme celem k vychodu
+        if dist > garage_radius_m:
             open_angles.append(current_angle)
 
-        if not rotate_by(turtle, rate, step_rad, w=0.5, stop_requested=stop_requested):
-            return False
+    # Dokoncili jsme otacku, zastavime
+    turtle.cmd_velocity(0.0, 0.0)
 
-    if not open_angles:
-        print("Zadny vychod nenalezen (vse v okruhu {:.2f} m je zed).".format(box_threshold_m))
+    if len(open_angles) == 0:
+        print("Vychod nenalezen (vse kolem je blizko jako zed).")
         return False
 
-    print("Pocitam stred vychodu...")
-    # Calculate target angle using circular mean to safely handle pi/-pi crossings
-    sum_sin = sum(math.sin(a) for a in open_angles)
-    sum_cos = sum(math.cos(a) for a in open_angles)
-    target_angle = math.atan2(sum_sin, sum_cos)
+    print("Pocitam stred vychodu (prostredkem pole)...")
+    
+    # MATEMATICKY JEDNODUSI RESENI: Vezmeme uhel presne uprostred z tech, kde bylo volno
+    mid_index = len(open_angles) // 2
+    target_angle = open_angles[mid_index]
 
-    print("Stred vychodu vypocitan na {:.2f} rad. Natacim se...".format(target_angle))
+    print("Stred vychodu nalezen na {:.2f} rad. Natacim se...".format(target_angle))
 
-    # Turn robot toward the calculated target angle
+    # Dotocime se na tento uhel
     _, _, current_angle = turtle.get_odometry()
     diff = target_angle - current_angle
 
-    # Normalize shortest rotation difference to <-pi, pi>
-    while diff > math.pi:
-        diff -= 2.0 * math.pi
-    while diff < -math.pi:
-        diff += 2.0 * math.pi
+    # Normalizace uhlu na interval <-pi, pi>
+    while diff > math.pi: diff -= 2.0 * math.pi
+    while diff < -math.pi: diff += 2.0 * math.pi
 
     if not rotate_by(turtle, rate, diff, w=0.5, stop_requested=stop_requested):
         return False
 
-    print("Smer na vychod nastaven, vyjizdim z boxu...")
-    # Drive straight out to escape the box bounds
+    print("Otoceno k vychodu. Vyjizdim z garaze...")
+    # Vyjedeme ven (tvoje funkce z drive_around.py)
     if not drive_straight(turtle, rate, escape_dist_m, v=0.2, stop_requested=stop_requested):
         return False
 
-    print("Uspesne jsem vyjel z boxu.")
+    print("Uspesne jsem vyjel z garaze.")
     return True
 def abort_if_needed():
     """Stop the robot and terminate the program when emergency stop is active."""
