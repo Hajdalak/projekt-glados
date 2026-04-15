@@ -83,7 +83,7 @@ def get_hsv(turtle):
     rgb_image = get_bgr(turtle)
     if rgb_image is None:
         return None
-    return cv2.cvtColor(rgb_image, cv2.COLOR_BGR2HSV)
+    return cv2.cvtColor(rgb_image, cv2.COLOR_RGB2HSV)
 
 
 def create_hsv_mask(hsv_image, min_h, max_h, min_s, max_s, min_v, max_v):
@@ -241,11 +241,11 @@ def get_yellow_mask(turtle):
 
 def find_garage_opening_center(
     turtle,
-    row_ratio=0.60,
-    band_half_height=20,
-    min_gap_width=80,
-    min_wall_width=40,
-    yellow_ratio_threshold=0.25,
+    row_ratio=0.68,
+    band_half_height=18,
+    min_gap_width=50,
+    min_wall_width=12,
+    yellow_ratio_threshold=0.12,
 ):
     """
     Hleda otvor garaze jako mezeru bez zlute mezi dvema zlutymi stenami.
@@ -267,10 +267,8 @@ def find_garage_opening_center(
     if band.size == 0:
         return None
 
-    # Pro kazdy sloupec spocitej, kolik pixelu v pasu je zluty.
     col_sum = np.sum(band > 0, axis=0)
 
-    # Sloupec ber jako "zluty", kdyz je zluteho dost v casti pasu.
     threshold = max(1, int(yellow_ratio_threshold * band.shape[0]))
     yellow_cols = col_sum >= threshold
     free_cols = ~yellow_cols
@@ -295,15 +293,9 @@ def find_garage_opening_center(
 
     for gs, ge in gaps:
         gap_width = ge - gs + 1
-
-        # Ignoruj mezery dotykajici se kraju obrazu.
-        if gs == 0 or ge == w - 1:
-            continue
-
         if gap_width < min_gap_width:
             continue
 
-        # Pozaduj zlute steny vlevo i vpravo od mezery.
         left_wall_width = 0
         i = gs - 1
         while i >= 0 and yellow_cols[i]:
@@ -316,6 +308,7 @@ def find_garage_opening_center(
             right_wall_width += 1
             i += 1
 
+        # ve fazi hledani bud tolerantnejsi
         if left_wall_width < min_wall_width or right_wall_width < min_wall_width:
             continue
 
@@ -324,7 +317,6 @@ def find_garage_opening_center(
     if not valid_gaps:
         return None
 
-    # Vezmi nejvetsi validni otvor.
     best_start, best_end = max(valid_gaps, key=lambda p: p[1] - p[0])
 
     gap_width = best_end - best_start + 1

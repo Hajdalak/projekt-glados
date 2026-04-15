@@ -177,13 +177,13 @@ def drive_straight(turtle, rate, dist_m, v=0.10, tol=0.02, stop_requested=None):
 def search_for_garage_opening(
     turtle,
     stop_requested=None,
-    search_angular_speed=0.25,
-    min_gap_width=80,
-    row_ratio=0.60
+    search_angular_speed=0.20,
+    min_gap_width=50,
+    row_ratio=0.68
 ):
     rate = Rate(10)
     opening_seen_count = 0
-    needed_count = 4
+    needed_count = 2
 
     print("Hledam otvor garaze...")
 
@@ -191,7 +191,10 @@ def search_for_garage_opening(
         opening = vision.find_garage_opening_center(
             turtle,
             row_ratio=row_ratio,
-            min_gap_width=min_gap_width
+            band_half_height=18,
+            min_gap_width=min_gap_width,
+            min_wall_width=12,
+            yellow_ratio_threshold=0.12,
         )
 
         if opening is not None:
@@ -219,17 +222,17 @@ def search_for_garage_opening(
 def center_garage_opening(
     turtle,
     image_width=640,
-    tolerance=20,
-    kp=0.004,
-    min_gap_width=80,
-    row_ratio=0.60,
+    tolerance=25,
+    kp=0.0035,
+    min_gap_width=60,
+    row_ratio=0.68,
     stop_requested=None
 ):
     rate = Rate(10)
     good_count = 0
-    needed_good = 4
+    needed_good = 3
     lost_count = 0
-    max_lost = 5
+    max_lost = 8
 
     print("Centruji se do otvoru garaze...")
 
@@ -237,7 +240,10 @@ def center_garage_opening(
         opening = vision.find_garage_opening_center(
             turtle,
             row_ratio=row_ratio,
-            min_gap_width=min_gap_width
+            band_half_height=18,
+            min_gap_width=min_gap_width,
+            min_wall_width=12,
+            yellow_ratio_threshold=0.12,
         )
 
         if opening is None:
@@ -270,10 +276,10 @@ def center_garage_opening(
             good_count = 0
 
             ang = kp * error
-            if ang > 0.22:
-                ang = 0.22
-            elif ang < -0.22:
-                ang = -0.22
+            if ang > 0.18:
+                ang = 0.18
+            elif ang < -0.18:
+                ang = -0.18
 
             turtle.cmd_velocity(0.0, ang)
 
