@@ -25,6 +25,14 @@ GATE_MAX_S = 171
 GATE_MIN_V = 0
 GATE_MAX_V = 255
 
+# HSV profile tuned for the garage in current lab lighting.
+GARAGE_MIN_H = 22
+GARAGE_MAX_H = 64
+GARAGE_MIN_S = 104
+GARAGE_MAX_S = 255
+GARAGE_MIN_V = 72
+GARAGE_MAX_V = 255
+
 # Default geometric filters for ball detections.
 BALL_DEFAULT_MIN_AREA = 200
 BALL_DEFAULT_MAX_AREA = 8000
@@ -37,6 +45,11 @@ DEFAULT_AXIS_RATIO_MIN = BALL_DEFAULT_AXIS_RATIO_MIN
 GATE_DEFAULT_MIN_AREA = 120
 GATE_DEFAULT_MAX_AREA = 20000
 GATE_DEFAULT_AXIS_RATIO_MIN = 0.10
+
+# Default geometric filters for garage detections.
+GARAGE_DEFAULT_MIN_AREA = 31251
+GARAGE_DEFAULT_MAX_AREA = 280000
+GARAGE_DEFAULT_AXIS_RATIO_MIN = 0.0
 
 
 def _resolve_detection_profile(target_type):
@@ -53,6 +66,20 @@ def _resolve_detection_profile(target_type):
             'min_area': GATE_DEFAULT_MIN_AREA,
             'max_area': GATE_DEFAULT_MAX_AREA,
             'axis_tolerance': GATE_DEFAULT_AXIS_RATIO_MIN,
+        }
+
+    if target_type == 'garage':
+        # Use the garage-specific HSV and area constraints.
+        return {
+            'min_h': GARAGE_MIN_H,
+            'max_h': GARAGE_MAX_H,
+            'min_s': GARAGE_MIN_S,
+            'max_s': GARAGE_MAX_S,
+            'min_v': GARAGE_MIN_V,
+            'max_v': GARAGE_MAX_V,
+            'min_area': GARAGE_DEFAULT_MIN_AREA,
+            'max_area': GARAGE_DEFAULT_MAX_AREA,
+            'axis_tolerance': GARAGE_DEFAULT_AXIS_RATIO_MIN,
         }
 
     # Default behavior remains the ball detector.

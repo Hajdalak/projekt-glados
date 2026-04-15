@@ -140,6 +140,36 @@ def recenter_to_ball(turtle, image_width=640, tolerance=20, kp=0.005, stop_reque
     return cx, cy
 
 
+def find_garage_by_turning_left(turtle, search_angular_speed=0.3, stop_requested=None):
+    """Rotate left until the garage is visible and return whether it was found."""
+    if should_stop(stop_requested):
+        print("Hledani garaze preskoceno: byl pozadovan stop.")
+        return False
+
+    print("Hledam garaz otacenim doleva...")
+    rate = Rate(10)
+    objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='garage')
+
+    while len(objects) == 0 and not should_stop(stop_requested):
+        # Positive angular velocity rotates the robot left.
+        turtle.cmd_velocity(linear=0.0, angular=abs(search_angular_speed))
+        rate.sleep()
+        objects = vision.detect_objects_by_hsv_and_area(turtle, target_type='garage')
+
+    turtle.cmd_velocity(0.0, 0.0)
+
+    if should_stop(stop_requested):
+        print("Hledani garaze preruseno: byl pozadovan stop.")
+        return False
+
+    if len(objects) == 0:
+        print("Hledani garaze skoncilo bez detekce.")
+        return False
+
+    print("Garaz nalezena.")
+    return True
+
+
 def approach_and_center(turtle, target_boundary, speed, target_type='ball', stop_requested=None):
     """
     Helper function: measure distance, drive to a target boundary, and re-center.
