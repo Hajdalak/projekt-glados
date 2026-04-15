@@ -232,56 +232,102 @@ def get_yellow_mask(turtle):
         GARAGE_MAX_V,
     )
 
-    kernel = np.ones((5, 5), dtype=np.uint8)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_OPEN, kernel)
-    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel)
+    # Pro garaz je dulezite spis zacelit diry ve zlute stene,
+    # ne odmazavat male oblasti zlute.
+    kernel_close = np.ones((7, 7), dtype=np.uint8)
+    mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel_close, iterations=2)
+
     return mask
 
-
-def find_garage_opening_center(turtle, row_ratio=0.60, min_gap_width=80):
+def find_garage_opening_center(
+    turtle,
+    row_ratio=0.60,
+    band_half_height=20,
+    min_gap_width=80,
+    min_wall_width=40,
+    yellow_ratio_threshold=0.25,
+):
     """
-    Detect the horizontal center of the largest gap without yellow color.
-    Returns (gap_center_x, gap_width, scan_row) or None.
+    Hleda otvor garaze jako mezeru bez zlute mezi dvema zlutymi stenami.
+    Vraci (gap_center_x, gap_width, scan_row) nebo None.
     """
     mask = get_yellow_mask(turtle)
     if mask is None:
         return None
 
     h, w = mask.shape
+
     row = int(round(h * row_ratio))
     row = max(0, min(h - 1, row))
 
-    line = mask[row, :]
-    yellow = line > 0
-    non_yellow = ~yellow
+    y1 = max(0, row - band_half_height)
+    y2 = min(h, row + band_half_height + 1)
 
-    best_start = None
-    best_end = None
-    current_start = None
-
-    for i, value in enumerate(non_yellow):
-        if value and current_start is None:
-            current_start = i
-        elif (not value) and current_start is not None:
-            current_end = i - 1
-            if best_start is None or (current_end - current_start) > (best_end - best_start):
-                best_start = current_start
-                best_end = current_end
-            current_start = None
-
-    if current_start is not None:
-        current_end = w - 1
-        if best_start is None or (current_end - current_start) > (best_end - best_start):
-            best_start = current_start
-            best_end = current_end
-
-    if best_start is None or best_end is None:
+    band = mask[y1:y2, :]
+    if band.size == 0:
         return None
+
+    # Pro kazdy sloupec spocitej, kolik pixelu v pasu je zluty.
+    col_sum = np.sum(band > 0, axis=0)
+
+    # Sloupec ber jako "zluty", kdyz je zluteho dost v casti pasu.
+    threshold = max(1, int(yellow_ratio_threshold * band.shape[0]))
+    yellow_cols = col_sum >= threshold
+    free_cols = ~yellow_cols
+
+    gaps = []
+    in_gap = False
+    start = 0
+
+    for x in range(w):
+        if free_cols[x] and not in_gap:
+            start = x
+            in_gap = True
+        elif (not free_cols[x]) and in_gap:
+            end = x - 1
+            gaps.append((start, end))
+            in_gap = False
+
+    if in_gap:
+        gaps.append((start, w - 1))
+
+    valid_gaps = []
+
+    for gs, ge in gaps:
+        gap_width = ge - gs + 1
+
+        # Ignoruj mezery dotykajici se kraju obrazu.
+        if gs == 0 or ge == w - 1:
+            continue
+
+        if gap_width < min_gap_width:
+            continue
+
+        # Pozaduj zlute steny vlevo i vpravo od mezery.
+        left_wall_width = 0
+        i = gs - 1
+        while i >= 0 and yellow_cols[i]:
+            left_wall_width += 1
+            i -= 1
+
+        right_wall_width = 0
+        i = ge + 1
+        while i < w and yellow_cols[i]:
+            right_wall_width += 1
+            i += 1
+
+        if left_wall_width < min_wall_width or right_wall_width < min_wall_width:
+            continue
+
+        valid_gaps.append((gs, ge))
+
+    if not valid_gaps:
+        return None
+
+    # Vezmi nejvetsi validni otvor.
+    best_start, best_end = max(valid_gaps, key=lambda p: p[1] - p[0])
 
     gap_width = best_end - best_start + 1
-    if gap_width < min_gap_width:
-        return None
-
     gap_center_x = 0.5 * (best_start + best_end)
-    return float(gap_center_x), int(gap_width), int(row)
 
+    return float(gap_center_x), int(gap_width), int(row)
