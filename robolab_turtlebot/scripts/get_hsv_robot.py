@@ -14,17 +14,20 @@ WINDOW_MASK = 'Area-filtered HSV mask'
 
 
 DEFAULTS = {
-	'min_h': 40,
-	'max_h': 86,
-	'min_s': 80,
+	'min_h': 23,
+	'max_h': 64,
+	'min_s': 104,
 	'max_s': 255,
-	'min_v': 35,
+	'min_v': 72,
 	'max_v': 255,
-	'min_area': 700,
-	'max_area': 6000,
+	'min_area': 20000,
+	'max_area': 280000,
 	'kernel_size': 5,
 	'morph_on': 1,
 }
+
+
+AREA_TRACKBAR_MAX = 307200
 
 
 def _noop(_):
@@ -43,8 +46,8 @@ def _make_trackbars():
 	cv2.createTrackbar('min_v', WINDOW_MAIN, DEFAULTS['min_v'], 255, _noop)
 	cv2.createTrackbar('max_v', WINDOW_MAIN, DEFAULTS['max_v'], 255, _noop)
 
-	cv2.createTrackbar('min_area', WINDOW_MAIN, DEFAULTS['min_area'], 30000, _noop)
-	cv2.createTrackbar('max_area', WINDOW_MAIN, DEFAULTS['max_area'], 30000, _noop)
+	cv2.createTrackbar('min_area', WINDOW_MAIN, DEFAULTS['min_area'], AREA_TRACKBAR_MAX, _noop)
+	cv2.createTrackbar('max_area', WINDOW_MAIN, DEFAULTS['max_area'], AREA_TRACKBAR_MAX, _noop)
 
 	cv2.createTrackbar('kernel_size', WINDOW_MAIN, DEFAULTS['kernel_size'], 31, _noop)
 	cv2.createTrackbar('morph_on', WINDOW_MAIN, DEFAULTS['morph_on'], 1, _noop)
