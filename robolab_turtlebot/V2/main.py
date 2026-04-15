@@ -119,31 +119,31 @@ def main():
         # Wait for the manual start signal.
         # wait_for_button()
 
-        found_garage = movement.find_garage_by_turning_left(
-            turtle,
-            stop_requested=safety.is_stop_requested,
-        )
+        # found_garage = movement.find_garage_by_turning_left(
+        #     turtle,
+        #     stop_requested=safety.is_stop_requested,
+        # )
 
-        if not found_garage:
-            print("Garaz se nepodarilo najit.")
-            return
+        # if not found_garage:
+        #     print("Garaz se nepodarilo najit.")
+        #     return
 
-        lost_garage = movement.lose_garage_by_turning_left(
-            turtle,
-            stop_requested=safety.is_stop_requested,
-        )
+        # lost_garage = movement.lose_garage_by_turning_left(
+        #     turtle,
+        #     stop_requested=safety.is_stop_requested,
+        # )
 
-        if not lost_garage:
-            print("Garaz se nepodarilo nechat zmizet ze zaberu.")
-            return
+        # if not lost_garage:
+        #     print("Garaz se nepodarilo nechat zmizet ze zaberu.")
+        #     return
 
-        repositioned = movement.rotate_left_10deg_and_drive_30cm(
-            turtle,
-            stop_requested=safety.is_stop_requested,
-        )
-        if not repositioned:
-            print("Nepodarilo se provest kratky manevr pred startem.")
-            return
+        # repositioned = movement.rotate_left_10deg_and_drive_30cm(
+        #     turtle,
+        #     stop_requested=safety.is_stop_requested,
+        # )
+        # if not repositioned:
+        #     print("Nepodarilo se provest kratky manevr pred startem.")
+        #     return
 
         # Find and approach the ball.
         ok = start_drive()
