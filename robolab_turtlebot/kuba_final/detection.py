@@ -46,5 +46,3 @@ def find_ball(turtle, stop_requested=None, search_angular_speed=0.3):
     print("Nasel jsem micek.")
     cx, cy = float(objects[0][0]), float(objects[0][1])
     return cx, cy
-
-def center_garage(turtle, stop_requested=None, search_angular_speed=0.3)
