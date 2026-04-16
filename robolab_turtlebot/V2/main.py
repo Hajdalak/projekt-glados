@@ -117,7 +117,7 @@ def main():
 
     try:
         # Wait for the manual start signal.
-        # wait_for_button()
+        wait_for_button()
 
         found_garage = movement.find_garage_by_turning_left(
             turtle,
